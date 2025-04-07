@@ -1,0 +1,75 @@
+#TODO write here the script to build image and push to AWS ECR
+# verify if package already exists in container registry. If not, build it and push to registry? (optional)?
+
+name: 'Publier l''image Docker dans AWS ECR'
+description: 'Publier l''image Docker dans le conteneur d''images AWS ECR'
+inputs:
+  aws-region:
+    description: 'region AWS'
+    required: true
+    default: 'ca-central-1'
+  role-to-assume: 
+    description: 'le nom du role de publication d''image dans AWS ECR'
+    required: true
+  role-session-name:
+    description: 'le nom de la session du role de publicacion d''image dans AWS ECR'
+    required: true
+  image-name:
+    description: 'le nom de l''image à publier (i.e. <app-name>-<version>-<variant>)'
+    required: true
+    default: 'default-app-${{github.run_number}}'
+  working-directory:
+    description: 'le path du fichier Dockerfile'
+    required: true
+  # registry:
+  #   description: 'le nom du registre des images'
+  #   required: true
+  #   default: ghcr.io
+  # repository:
+  #   description: 'le nom du conteneur d''images AWS ECR'
+  #   required: true
+  # image-name:
+  #   description: "The name of the image"
+  #   required: true
+  #   default: ${{ github.repository }}
+  github-token:
+    description: "The token to log in to the container registry"
+    required: true
+    default: "devCqen"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 'Authentification à AWS'
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role-to-assume }}
+        role-session-name: ${{ inputs.role-session-name }}
+        aws-region: ${{ inputs.aws-region }}      
+    
+    - name: Authentification à AWS ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: 'Construction de l''image: ${{inputs.image-tag}}''
+      working-directory: ${{inputs.working-directory}}
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        REPOSITORY: ${{inputs.repository}}
+        IMAGE_TAG: ${{inputs.image-name}}
+      run: |
+        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:latest
+
+    - name: "Envoi de l''image dans AWS ECR"
+      working-directory: ${{inputs.working-directory}}
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        REPOSITORY: ${{ inputs.repository }}
+        IMAGE_TAG: ${{ inputs.image-name }}
+      run: |
+        docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+        docker push $REGISTRY/$REPOSITORY:latest                         

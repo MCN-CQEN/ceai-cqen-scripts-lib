@@ -14,8 +14,6 @@ inputs:
     required: true
     default: "devCqen"
 
-permissions:
-
 runs:
   using: "composite"
   steps:
