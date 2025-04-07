@@ -32,10 +32,10 @@ inputs:
   #   description: "The name of the image"
   #   required: true
   #   default: ${{ github.repository }}
-  github-token:
-    description: "The token to log in to the container registry"
-    required: true
-    default: "devCqen"
+  # github-token:
+  #   description: "The token to log in to the container registry"
+  #   required: true
+  #   default: "devCqen"
 
 runs:
   using: "composite"
@@ -54,7 +54,7 @@ runs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
     
-    - name: 'Construction de l''image: ${{inputs.image-tag}}''
+    - name: 'Construction image: ${{inputs.image-tag}}'
       working-directory: ${{inputs.working-directory}}
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -64,7 +64,7 @@ runs:
         docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
         docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:latest
 
-    - name: "Envoi de l''image dans AWS ECR"
+    - name: "Envoi image dans AWS ECR"
       working-directory: ${{inputs.working-directory}}
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
