@@ -21,21 +21,9 @@ inputs:
   working-directory:
     description: 'le path du fichier Dockerfile'
     required: true
-  # registry:
-  #   description: 'le nom du registre des images'
-  #   required: true
-  #   default: ghcr.io
   repository:
     description: 'le nom du conteneur d''images AWS ECR'
     required: true
-  # image-name:
-  #   description: "The name of the image"
-  #   required: true
-  #   default: ${{ github.repository }}
-  # github-token:
-  #   description: "The token to log in to the container registry"
-  #   required: true
-  #   default: "devCqen"
 
 runs:
   using: "composite"
