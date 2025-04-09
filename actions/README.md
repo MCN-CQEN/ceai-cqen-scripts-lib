@@ -61,7 +61,7 @@ Une composite action dans GitHub Actions est une manière de regrouper plusieurs
          - name: Checkout du code
            uses: actions/checkout@v3
          - name: Utiliser l'action composite
-           uses: MCN-CQEN/ceai-cqen-commons/actions/example@feature/actions
+           uses: MCN-CQEN/ceai-cqen-commons/actions/exemple@feature/actions
            with:
              example-input: "Bonjour"
    ```
