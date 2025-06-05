@@ -1,0 +1,31 @@
+name: Publier une Image Docker au Registre des Conteneurs d'Images
+description: Publier une image Docker au registre des conteneurs d'images (GitHub Packages). Utilisation de composite actions.
+
+on: 
+  workflow_dispatch
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: un job pour publier une image Docker au registre des conteneurs d'images
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write      
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build et push l'image Docker
+        #uses: MCN-CQEN/ceai-cqen-commons/actions/publish-image-to-registry@feature/actions
+        uses: ./github/actions/publish-image-to-registry
+        with:
+            registry: ghcr.io
+            image-name: ${{ github.repository }}-${{ github.run_number }}
+            github-token: ${{ secrets.GITHUB_TOKEN }}

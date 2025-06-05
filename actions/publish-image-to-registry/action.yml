@@ -1,16 +1,16 @@
-name: 'Publish image to registry'
-description: 'Publish Docker images to a registry (GitHub Packages)'
+name: "Publier une image au registre des conteneurs d'images"
+description: "Publier une image Docker aux registry (GitHub Packages)"
 inputs:
   registry:
-    description: "The registry where to publish"
+    description: "Le registre où publier l'image produite"
     required: true
     default: ghcr.io
   image-name:
-    description: "The name of the image"
+    description: "Le nom de l'image à produire"
     required: true
     default: ${{ github.repository }}
   github-token:
-    description: "The token to log in to the container registry"
+    description: "Le token pour se logger au registre des conteneurs d'images"
     required: true
     default: "devCqen"
 
@@ -22,20 +22,20 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Log in to the Container registry
+    - name: Log in au registre de conteneurs d'images
       uses: docker/login-action@v3
       with:
         registry: ${{ inputs.registry }}
         username: ${{ github.actor }}
         password: ${{ inputs.github-token }}
 
-    - name: Extract metadata (tags, labels) for Docker
+    - name: Extract metadata (tags, labels) pour Docker
       id: meta
       uses: docker/metadata-action@v5
       with:
         images: ${{inputs.registry}}/${{inputs.image-name}}
 
-    - name: Build and push Docker image
+    - name: Build et push de l'image Docker
       id: push
       uses: docker/build-push-action@v6
       with:
@@ -44,7 +44,9 @@ runs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }} 
 
-    - name: Generate artifact attestation
+    - name: Générer le certificat de l'artefact
+      # seulement si le repository est public
+      if: github.repository_visibility == 'public' # cette condition est nécessaire pour éviter les erreurs de publication dans les repositories privés
       uses: actions/attest-build-provenance@v2
       with:
         subject-name: ${{inputs.registry}}/${{inputs.image-name}}
