@@ -12,9 +12,6 @@ inputs:
   github-token:
     description: "Le token pour se logger au registre des conteneurs d'images"
     required: true
-    default: "devCqen"
-
-permissions:
 
 runs:
   using: "composite"

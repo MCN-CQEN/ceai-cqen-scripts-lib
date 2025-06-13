@@ -23,8 +23,8 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       - name: Build et push l'image Docker
-        #uses: MCN-CQEN/ceai-cqen-commons/actions/publish-image-to-registry@feature/actions
-        uses: ./github/actions/publish-image-to-registry
+        uses: MCN-CQEN/ceai-cqen-commons/actions/publish-image-to-registry@main
+        #uses: ./github/actions/publish-image-to-registry
         with:
             registry: ghcr.io
             image-name: ${{ github.repository }}-${{ github.run_number }}
