@@ -12,12 +12,28 @@ inputs:
   github-token:
     description: "Le token pour se logger au registre des conteneurs d'images"
     required: true
+  repository:
+    description: "Le repo de code où l'image est construite"
+    required: false
+    default: ${{ github.repository }}
+  ref:
+    description: "La référence (branch, tags) du repo de code où l'image est construite"
+    required: false
+    default: ${{ github.ref }}
+  path:
+    description: "Le chemin vers le répertoire contenant le Dockerfile et les sources de l'image"
+    required: false
+    default: "."    
 
 runs:
   using: "composite"
   steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
+        path: ${{ inputs.path }}      
     
     - name: Log in au registre de conteneurs d'images
       uses: docker/login-action@v3
