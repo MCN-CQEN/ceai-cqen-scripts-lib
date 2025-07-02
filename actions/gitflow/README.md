@@ -186,12 +186,12 @@ Pour se faire, allez dans les paramètres de votre dépôt, puis dans la section
 1. Créer un ___ruleset___
     1. Cliquez sur "Rules" / "Rulesets".
     2. Cliquez sur "New ruleset" / "New branch ruleset".
-       > ![alt text](../../docs/images/gitflow/repo-branch-ruleset-new.jpg)
+       > ![alt text](./docs/images/repo-branch-ruleset-new.jpg)
 2. Nommez votre règle *"Protection des pull request"*
 3. Activez la règle en sélectionnant **Active** sous *Enforcement status*.
-     > ![alt text](../../docs/images/gitflow/repo-branch-ruleset-enforcement-status.jpg)
+     > ![alt text](./docs/images/repo-branch-ruleset-enforcement-status.jpg)
 2. Ajoutez les branches `prod` (*Default*) et `dev` comme *targets*.
-     > ![alt text](../../docs/images/gitflow/repo-branch-ruleset-target-branches.jpg)
+     > ![alt text](./docs/images/repo-branch-ruleset-target-branches.jpg)
 3. Activez les options 
     1. *Restrict deletions*
     2. *Require a pull request before merging*
@@ -201,10 +201,10 @@ Pour se faire, allez dans les paramètres de votre dépôt, puis dans la section
             
             Attention : Ce n'est pas le nom du workflow lui-même, mais bien le nom de la job à l'intérieur du workflow. Si vous avez copié le flow `.github/workflows/gitflow_valider_pr.yml`, vous devriez avoir une job nommée `gitflow_on_pr_main_or_develop`.
 
-            > ![alt text](../../docs/images/gitflow/repo-branch-ruleset-status-checks-1.jpeg)
+            > ![alt text](./docs/images/repo-branch-ruleset-status-checks-1.jpeg)
             
             Après avoir fermé le menu, la job apparaîtra :
-            > ![alt text](../../docs/images/gitflow/repo-branch-ruleset-status-checks-2.jpeg)
+            > ![alt text](./docs/images/repo-branch-ruleset-status-checks-2.jpeg)
     3. *Block force pushes*
 
 Sauvegardez le tout, et voilà ! Vos branches sont protégées.

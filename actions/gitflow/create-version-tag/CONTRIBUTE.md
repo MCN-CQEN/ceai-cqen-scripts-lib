@@ -9,7 +9,7 @@ Pour les rouler, il faut lancer la commande :
 
 Voici le résultat attendu (peut être différent si de nouveaux tests on été ajoutés depuis la rédaction du présent fichier) :
 
-![alt text](../../../docs/images/gitflow/test_result_create-version-tag.png)
+![alt text](../docs/images/test_result_create-version-tag.png)
 
 
 Si vous obtenez une erreur, c'est peut-être parce que le clone du repo n'a pas les sous-modules initialisés ou mises à jour.

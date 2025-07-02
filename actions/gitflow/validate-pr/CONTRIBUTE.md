@@ -47,4 +47,4 @@ La version compilée de l'action sera déposée sous `/actions/validate-pr/dist`
 
 Si tout s'est bien passé, vous devriez voir un compte rendu de test, comme par exemple : 
 
-![alt text](../../../docs/images/gitflow/test_result_example.jpg)
+![alt text](./../docs/images/test_result_example.jpg)
