@@ -1,0 +1,61 @@
+name: 'Obtenir le version et la balise de sortie'
+description: "À l'aide de GitVersion, déduit le numéro de version (semver)"
+
+inputs:
+  buildNumberField:
+    description: "Nom de la variable retournée par GitVersion qui contient le numéro de build."
+    default: PreReleaseNumber
+  preReleaseNumberField:
+    description: "Nom de la variable retournée par GitVersion qui contient le numéro de build du release."
+    default: PreReleaseNumber
+  mainBranchNameRegex:
+    description: "Regex de la branche main"
+    default: ^master$|^main$|^prod$
+  releaseBranchNameRegex:
+    description: "Regex de la branche release"
+    default: ^release[\/-]
+  versionPrefix:
+    description: "Préfixe de la version (ex : 'v') qui sera systématiquement ajouté au début du tag de version" 
+    default: ''
+
+outputs:
+  semVer:
+    description: "Version de semver (<majeure>.<mineure>.<revision> pour prod ou <majeure>.<mineure>.<revision>-<etiquette>.<SHA>)"
+    value: ${{ steps.calculerVersion.outputs.semVer }}
+    
+runs:
+  using: "composite"
+  steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+
+  - name: Setup GitVersion
+    uses: gittools/actions/gitversion/setup@v1.1.1
+    with:
+      versionSpec: '6.0.x' # TODO : On ne peut pas monter à >= 6.1.x, probablement à cause de la version de Node.js. À ajuster
+  
+  - name: Determine Version
+    id: gitversion 
+    uses: gittools/actions/gitversion/execute@v1.1.1
+
+  - name: Préparer le path github pour la prochaine étape
+    run: echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+    shell: bash
+    env:
+      GITHUB_ACTION_PATH: ${{ github.action_path }}
+
+  - name: Calculer la version pour l'output
+    id: calculerVersion
+    shell: bash
+    env: 
+      MAJOR_MINOR_PATCH: ${{ steps.gitversion.outputs.majorMinorPatch }}
+      PRE_RELEASE_LABEL: ${{ steps.gitversion.outputs.preReleaseLabel }}
+      BUILD_NUMBER: ${{ steps.gitversion.outputs[inputs.buildNumberField] }}
+      PRE_RELEASE_NUMBER: ${{ steps.gitversion.outputs[inputs.preReleaseNumberField] }}
+      VERSION_PREFIX: ${{ inputs.versionPrefix }}
+      GITHUB_REF: ${{ github.ref }} 
+      MAIN_BRANCH_NAME_REGEX: ${{ inputs.mainBranchNameRegex }}
+      RELEASE_BRANCH_NAME_REGEX: ${{ inputs.releaseBranchNameRegex }}
+    run: get_semver.sh
