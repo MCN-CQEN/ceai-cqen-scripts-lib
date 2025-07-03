@@ -64,9 +64,9 @@ runs:
     - name: Définir les tags et labels de l'image
       id: tags
       run: |
-        echo "TAGS=${{ inputs.tags != '' && inputs.tags || steps.meta.outputs.tags }}" >> $GITHUB_OUTPUTS
+        echo "TAGS=${{ inputs.tags != '' && inputs.tags || steps.meta.outputs.tags }}" >> $GITHUB_ENV
         echo "TAGS: $TAGS"
-        echo "LABELS=${{ inputs.labels != '' && inputs.labels || steps.meta.outputs.labels }}" >> $GITHUB_OUTPUTS
+        echo "LABELS=${{ inputs.labels != '' && inputs.labels || steps.meta.outputs.labels }}" >> $GITHUB_ENV
         echo "LABELS: $LABELS"
       shell: bash
 
@@ -76,8 +76,8 @@ runs:
       with:
         context: ${{ inputs.path }}
         push: ${{ inputs.push-to-registry }}
-        tags: ${{ steps.tags.outputs.TAGS }}
-        labels: ${ steps.tags.outputs.LABELS }
+        tags: ${{ env.TAGS }}
+        labels: ${{ env.LABELS }}
         
     - name: Générer le certificat de l'artefact
       # seulement si le repository est public
