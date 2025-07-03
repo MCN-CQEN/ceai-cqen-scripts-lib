@@ -67,6 +67,7 @@ runs:
         echo "IMAGE_TAGS: $IMAGE_TAGS"
         echo "IMAGE_LABELS=${{ inputs.labels != '' && inputs.labels || steps.meta.outputs.labels }}" >> $GITHUB_OUTPUTS
         echo "IMAGE_LABELS: $IMAGE_LABELS"
+      shell: bash
 
     - name: Build et push de l'image Docker
       id: push
