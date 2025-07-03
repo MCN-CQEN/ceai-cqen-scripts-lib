@@ -1,0 +1,103 @@
+name: Action pour valider et déployer le terraform du module RDS Aurora PostgreSQL
+
+# Ceci est un exemple de comment on fait appel au script de validate les scripts Terraform
+# Ce script est utilisé pour valider et appliquer les scripts Terraform du module RDS Aurora PostgreSQL.
+# Utiliser seulement comme référence, il devrait pas être exécuté.
+
+
+on:
+    workflow_dispatch:  # Allows manual triggering of the workflow
+
+# Permission can be added at job level or workflow level    
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  
+  Validate-and-apply-terraform-scripts:   
+    runs-on: ubuntu-latest
+    environment: preprod
+
+    steps:
+        - name: "Start process of validating terraform for RDS module"
+          shell: bash
+          run: echo "Start process of validating terraform for RDS module"
+
+        - name: Checkout the repository to the runner
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+
+        - name: Validate Terraform RDS module
+          id: common-infra-validate
+          #uses: ./.github/workflows/common/infra/validate
+          uses: MCN-CQEN/ceai-cqen-commons/actions/infra-validate-tf@main
+          with:
+            working_directory: ./aws/terraform/modules/rds-aurora
+            environment: ${{ vars.ENVIRONMENT }}
+            bucket_tf_state: ${{ vars.BACKEND_BUCKET }}
+            role_to_assume: ${{ secrets.ASSUME_ROLE_ARN }}
+            #checkov_ignore_list: "CKV_AWS_283,BC_AWS_GENERAL_225,BC_AWS_IAM_66,BC_AWS_GENERAL_121,BC_AWS_GENERAL_96,BC_AWS_GENERAL_49,BC_AWS_GENERAL_192,BC_AWS_GENERAL_79,BC_CROSS_1"  # Example of checks to ignore
+            # checkov ignore list: (https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies.html)
+            # - BC_CROSS_1: Ensure Terraform module sources use a commit hash.
+            # - BC_AWS_GENERAL_192: Ensure Secrets Manager secrets should have automatic rotation enabled.
+            # - CKV_AWS_283: Ensure no IAM policies documents allow ALL or any AWS principal permissions to the resource.
+            # - BC_CROSS_2: Ensure Terraform modules use a specific version.
+            # - CKV2_AWS_8: Ensure that RDS clusters has backup plan of AWS Backup. (Backup is created dinamically by the module)
+            # - CKV2_AWS_27: Ensure Postgres RDS as aws_rds_cluster has Query Logging enabled. (Specific to RDS, so skipped))
+            # - CKV_AWS_149: Ensure that Secrets Manager secret is encrypted using KMS CMK. (No access to KMS CMK in this module, so skipped)
+            # - CKV_AWS_162: Ensure RDS cluster has IAM authentication enabled. (Not applicable for this project, so skipped)
+            checkov_ignore_list: "BC_CROSS_1,BC_AWS_GENERAL_192,CKV_AWS_283,BC_CROSS_2,CKV2_AWS_8,CKV2_AWS_27,CKV_AWS_149,CKV_AWS_162"
+
+        - name: Print Terraform validate output
+          run: |
+            echo "Terraform validate output: ${{ steps.common-infra-validate.outputs.terraform_validate }}"
+            echo "Terraform fmt output: ${{ steps.common-infra-validate.outputs.terraform_fmt }}"
+            echo "Terraform init output: ${{ steps.common-infra-validate.outputs.terraform_init }}"
+            echo "Checkov output: ${{ steps.common-infra-validate.outputs.checkov }}"
+        
+        - name: Terraform validate status
+          # This step checks the outcome of the Terraform validate step and exits with an error if it failed
+          if: steps.common-infra-validate.outcome == 'failure'
+          run: exit 1
+
+        - name: "Setup terraform variables (${{ vars.environment }})"
+          working-directory: ./aws/terraform/modules/rds-aurora
+          shell: bash
+          # This step sets up the necessary variables for the Terraform configuration
+          id: vars
+          run: |-
+            cat > terraform.tfvars <<EOF
+            workload_account_type = "${{ vars.WORKLOAD_ACCOUNT_TYPE }}"
+            environment           = "${{ vars.ENVIRONMENT }}"
+            system              = "${{ vars.SYSTEM }}"
+            backup_alarms_email = "${{ vars.BACKUP_ALARMS_EMAIL }}"
+            EOF
+
+        - name: Terraform refresh
+          working-directory: ./aws/terraform/modules/rds-aurora
+          shell: bash
+          # This step refreshes the Terraform state with the current infrastructure state
+          run: |
+            terraform refresh -var-file 'terraform.tfvars'
+
+        - name: Plan Terraform RDS module
+          id: infra-plan
+          working-directory: ./aws/terraform/modules/rds-aurora
+          shell: bash
+          run: |
+            terraform plan -var-file 'terraform.tfvars'
+
+        - name: Terraform plan status
+          # This step checks the outcome of the Terraform apply step and exits with an error if it failed
+          if: steps.infra-plan.outcome == 'failure'
+          run: exit 1
+
+        - name: Terraform apply RDS module
+          id: infra-apply
+          working-directory: ./aws/terraform/modules/rds-aurora
+          shell: bash
+          run: |
+            terraform apply -auto-approve -var-file 'terraform.tfvars'
+            echo "Terraform apply completed successfully."
