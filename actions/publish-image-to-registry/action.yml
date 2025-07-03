@@ -75,8 +75,8 @@ runs:
       with:
         context: ${{ inputs.path }}
         push: ${{ inputs.push-to-registry }}
-        tags: ${{ needs.tags.outputs.IMAGE_TAGS }}
-        labels: ${ needs.tags.outputs.IMAGE_LABELS }
+        tags: ${{ steps.tags.outputs.IMAGE_TAGS }}
+        labels: ${ steps.tags.outputs.IMAGE_LABELS }
         
     - name: Générer le certificat de l'artefact
       # seulement si le repository est public
