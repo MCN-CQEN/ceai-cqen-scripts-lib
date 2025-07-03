@@ -23,7 +23,11 @@ inputs:
   path:
     description: "Le chemin vers le répertoire contenant le Dockerfile et les sources de l'image"
     required: false
-    default: "."    
+    default: "."   
+  push-to-registry:
+    description: "Indique si l'image doit être poussée au registre (true/false)"
+    required: false
+    default: true 
 
 runs:
   using: "composite"
@@ -52,11 +56,11 @@ runs:
       id: push
       uses: docker/build-push-action@v6
       with:
-        context: .
-        push: true
+        context: ${{ inputs.path }}
+        push: ${{ inputs.push-to-registry }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }} 
-
+        
     - name: Générer le certificat de l'artefact
       # seulement si le repository est public
       if: github.repository_visibility == 'public' # cette condition est nécessaire pour éviter les erreurs de publication dans les repositories privés
