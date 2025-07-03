@@ -60,17 +60,22 @@ runs:
       with:
         images: ${{inputs.registry}}/${{inputs.image-name}}
 
+    - name: Valeur du tag et de l'étiquette de l'image
+      id: tags
+      run: |
+        echo "IMAGE_TAGS=${{ inputs.tags != '' && inputs.tags || steps.meta.outputs.tags }}" >> $GITHUB_OUTPUTS
+        echo "IMAGE_TAGS: $IMAGE_TAGS"
+        echo "IMAGE_LABELS=${{ inputs.labels != '' && inputs.labels || steps.meta.outputs.labels }}" >> $GITHUB_OUTPUTS
+        echo "IMAGE_LABELS: $IMAGE_LABELS"
+
     - name: Build et push de l'image Docker
       id: push
       uses: docker/build-push-action@v6
-      env:
-        IMAGE_TAG: if: ${{ inputs.tags != '' }}; else: ${{ steps.meta.outputs.tags }}
-        IMAGE_LABELS: if: ${{ inputs.labels != '' }}; else: ${{ steps.meta.outputs.labels }}
       with:
         context: ${{ inputs.path }}
         push: ${{ inputs.push-to-registry }}
-        tags: $IMAGE_TAG
-        labels: $IMAGE_LABELS
+        tags: ${{ needs.tags.outputs.IMAGE_TAGS }}
+        labels: ${ needs.tags.outputs.IMAGE_LABELS }
         
     - name: Générer le certificat de l'artefact
       # seulement si le repository est public
