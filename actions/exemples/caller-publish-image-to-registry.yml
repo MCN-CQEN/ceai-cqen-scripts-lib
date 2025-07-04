@@ -29,7 +29,7 @@ jobs:
             registry: ghcr.io
             image-name: ${{ github.repository }}-${{ github.run_number }}
             github-token: ${{ secrets.GITHUB_TOKEN }}
-            # Optionellement on peut ajouter le nom du repo, la référence et le path au Dockerfile s'ils ne sont pas par défaut
+            # Optionellement on peut ajouter le nom du repo, la référence et le path au Dockerfile s'ils n'ont pas les valeurs par défaut
             # repository: ${{ github.repository }}
             # ref: ${{ github.ref }} 
             # path: "."
