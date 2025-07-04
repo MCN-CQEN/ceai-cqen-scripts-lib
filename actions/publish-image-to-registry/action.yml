@@ -27,7 +27,7 @@ inputs:
   push-to-registry:
     description: "Indique si l'image doit être poussée au registre (true/false)"
     required: false
-    default: true 
+    default: "true"
   tags:
     description: "Les tags à appliquer à l'image (séparés par des virgules)"
     required: false
@@ -65,9 +65,9 @@ runs:
       id: tags
       run: |
         echo "TAGS=${{ inputs.tags != '' && inputs.tags || steps.meta.outputs.tags }}" >> $GITHUB_ENV
-        echo "TAGS: $env.TAGS"
+        echo $TAGS
         echo "LABELS=${{ inputs.labels != '' && inputs.labels || steps.meta.outputs.labels }}" >> $GITHUB_ENV
-        echo "LABELS: $env.LABELS"
+        echo $LABELS
       shell: bash
 
     - name: Build et push de l'image Docker
