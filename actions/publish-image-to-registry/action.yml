@@ -65,9 +65,9 @@ runs:
       id: tags
       run: |
         echo "TAGS=${{ inputs.tags != '' && inputs.tags || steps.meta.outputs.tags }}" >> $GITHUB_ENV
-        echo "TAGS: $TAGS"
+        echo "TAGS: $env.TAGS"
         echo "LABELS=${{ inputs.labels != '' && inputs.labels || steps.meta.outputs.labels }}" >> $GITHUB_ENV
-        echo "LABELS: $LABELS"
+        echo "LABELS: $env.LABELS"
       shell: bash
 
     - name: Build et push de l'image Docker
