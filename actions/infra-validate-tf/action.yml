@@ -13,25 +13,25 @@ description: |
 
 inputs:
     working_directory:
-        required: true
-        type: string
+      description: "Le répertoire de travail où se trouvent les fichiers Terraform"
+      required: true
     environment:
-        required: true
-        type: string
+      description: "L'environnement dans lequel le code Terraform sera validé (par exemple, 'preprod', 'prod')"
+      required: true
     aws_region:
-        required: true
-        type: string
-        default: "ca-central-1"
+      description: "La région AWS dans laquelle le code Terraform sera exécuté"
+      required: true
+      default: "ca-central-1"
     bucket_tf_state:
-        required: true
-        type: string
+      description: "Le nom du bucket S3 pour stocker l'état Terraform"
+      required: true
     role_to_assume:
-        required: true
-        type: string
+      description: "Le rôle IAM à assumer pour exécuter les actions Terraform"
+      required: true
     checkov_ignore_list:
-        required: false
-        type: string
-        default: "BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149"  # Example of checks to ignore
+      description: "Liste des vérifications Checkov à ignorer, séparées par des virgules. Par exemple: 'BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149'"
+      required: false
+      default: "BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149"  # Example of checks to ignore
 outputs:
     terraform_validate:
         description: "Terraform validate output"

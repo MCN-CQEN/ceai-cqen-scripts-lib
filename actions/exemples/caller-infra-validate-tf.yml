@@ -32,7 +32,7 @@ jobs:
         - name: Validate Terraform RDS module
           id: common-infra-validate
           #uses: ./.github/workflows/common/infra/validate
-          uses: MCN-CQEN/ceai-cqen-commons/actions/infra-validate-tf@main
+          uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/infra-validate-tf@main
           with:
             working_directory: ./aws/terraform/modules/rds-aurora
             environment: ${{ vars.ENVIRONMENT }}
