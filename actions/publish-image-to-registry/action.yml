@@ -27,7 +27,7 @@ inputs:
   push-to-registry:
     description: "Indique si l'image doit être poussée au registre (true/false)"
     required: false
-    default: true 
+    default: "true" 
   tags:
     description: "Les tags à appliquer à l'image (séparés par des virgules)"
     required: false
