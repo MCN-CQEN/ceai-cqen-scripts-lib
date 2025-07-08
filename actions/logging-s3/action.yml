@@ -1,0 +1,94 @@
+name: script reutilisable pour valider le terraform
+description: |
+  Cette action est un workflow réutilisable qui valide le code Terraform.
+  Il vérifie le formatage, initialise le backend et valide la configuration Terraform.
+  Il est conçu pour être appelé depuis d'autres workflows.
+  L'action utilise l'action `hashicorp/setup-terraform` pour configurer Terraform, et l'action `aws-actions/configure-aws-credentials` pour configurer les informations d'identification AWS.
+  L'action utilise également l'action `bridgecrewio/checkov-action` pour exécuter des vérifications de sécurité sur le code Terraform.
+
+  S'exécute dans le runner et le même work area que le workflow appelant.
+  Pas besoin d'utiliser 'build-artifacts' pour passer les artefacts entre les jobs.
+  Les variables d'environnement sont passées en tant qu'entrées. (inheritance)
+  Les secrets ne sont pas passés en tant qu'entrées, mais sont disponibles dans le contexte de l'action.
+
+inputs:
+    working_directory:
+        required: true
+        type: string
+    environment:
+        required: true
+        type: string
+    aws_region:
+        required: true
+        type: string
+        default: "ca-central-1"
+    bucket_tf_state:
+        required: true
+        type: string
+    role_to_assume:
+        required: true
+        type: string
+    checkov_ignore_list:
+        required: false
+        type: string
+        default: "BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149"  # Example of checks to ignore
+outputs:
+    terraform_validate:
+        description: "Terraform validate output"
+        value: ${{ steps.validate.outcome }}
+    terraform_fmt:
+        description: "Terraform fmt output"
+        value: ${{ steps.fmt.outcome }}
+    terraform_init:
+        description: "Terraform init output"
+        value: ${{ steps.init.outcome }}
+    checkov:
+        description: "Checkov output"
+        value: ${{ steps.checkov.outcome }}
+
+runs:
+    using: "composite"    
+    steps:  
+        - name: Checkout the repository (${{ inputs.environment }}) to the runner
+          uses: actions/checkout@v4      
+          with:
+            fetch-depth: 0
+    
+        - name: "Configure AWS credentials for role ${{ inputs.role_to_assume }}"
+          uses: aws-actions/configure-aws-credentials@v4          
+          with:                
+            role-to-assume: ${{ inputs.role_to_assume }}
+            role-session-name: GitHub_to_AWS_via_FederatedOIDC
+            aws-region: ${{ inputs.aws_region }}
+
+        - name: Setup Terraform with specified version on the runner
+          uses: hashicorp/setup-terraform@v3
+          
+        - name: Terraform format
+          id: fmt
+          working-directory: ${{ inputs.working_directory }}
+          run: terraform fmt -check -recursive -diff      
+          shell: bash  
+        
+        - name: Terraform init
+          id: init
+          working-directory: ${{ inputs.working_directory }}
+          run: terraform init -backend-config="bucket=${{ inputs.bucket_tf_state }}"
+          shell: bash 
+
+        - name: Terraform validate
+          id: validate
+          working-directory: ${{ inputs.working_directory }}
+          run: terraform validate
+          shell: bash
+
+        - name: Checkov scan
+          # This step uses the Checkov GitHub Action to scan Terraform code for security issues.
+          id: checkov
+          uses: bridgecrewio/checkov-action@master        
+          with:
+            framework: terraform
+            directory: ${{ inputs.working_directory }}
+            skip_check: ${{ inputs.checkov_ignore_list }}
+            output_format: json
+            download_external_modules: true                 
