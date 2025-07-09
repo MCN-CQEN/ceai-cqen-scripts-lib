@@ -27,7 +27,7 @@ inputs:
   push-to-registry:
     description: "Indique si l'image doit être poussée au registre (true/false)"
     required: false
-    default: "true" 
+    default: "true"
   tags:
     description: "Les tags à appliquer à l'image (séparés par des virgules)"
     required: false
@@ -60,17 +60,24 @@ runs:
       with:
         images: ${{inputs.registry}}/${{inputs.image-name}}
 
+    # if the tags or labels inputs are not provided, use the outputs from the metadata-action
+    - name: Définir les tags et labels de l'image
+      id: tags
+      run: |
+        echo "TAGS=${{ inputs.tags != '' && inputs.tags || steps.meta.outputs.tags }}" >> $GITHUB_ENV
+        echo $TAGS
+        echo "LABELS=${{ inputs.labels != '' && inputs.labels || steps.meta.outputs.labels }}" >> $GITHUB_ENV
+        echo $LABELS
+      shell: bash
+
     - name: Build et push de l'image Docker
       id: push
       uses: docker/build-push-action@v6
-      env:
-        IMAGE_TAG: if: ${{ inputs.tags != '' }}; else: ${{ steps.meta.outputs.tags }}
-        IMAGE_LABELS: if: ${{ inputs.labels != '' }}; else: ${{ steps.meta.outputs.labels }}
       with:
         context: ${{ inputs.path }}
         push: ${{ inputs.push-to-registry }}
-        tags: $IMAGE_TAG
-        labels: $IMAGE_LABELS
+        tags: ${{ env.TAGS }}
+        labels: ${{ env.LABELS }}
         
     - name: Générer le certificat de l'artefact
       # seulement si le repository est public
