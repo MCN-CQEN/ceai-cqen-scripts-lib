@@ -4,10 +4,10 @@ description: "À l'aide de GitVersion, déduit le numéro de version (semver)"
 inputs:
   buildNumberField:
     description: "Nom de la variable retournée par GitVersion qui contient le numéro de build."
-    default: PreReleaseNumber
+    default: ShortSha
   preReleaseNumberField:
     description: "Nom de la variable retournée par GitVersion qui contient le numéro de build du release."
-    default: PreReleaseNumber
+    default: ShortSha
   mainBranchNameRegex:
     description: "Regex de la branche main"
     default: ^master$|^main$|^prod$
