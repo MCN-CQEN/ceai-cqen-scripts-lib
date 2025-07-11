@@ -7,26 +7,26 @@ description: |
 
 inputs:
   bucket:
+    description: "Nom du bucket S3 où les logs seront stockés"
     required: true
-    type: string
   region:
+    description: "Région AWS où le bucket S3 est situé"
     required: true
-    type: string
   role-to-assume:
+    description: "ARN du rôle IAM à assumer pour accéder au bucket S3"
     required: true
-    type: string  
   status:
+    description: "Statut de l'exécution (par exemple, 'success', 'failure')"
     required: true
-    type: string
   message:
+    description: "Message descriptif de l'exécution (par exemple, 'Tests réussis', 'Déploiement échoué')"
     required: true
-    type: string  
   workflow:
+    description: "Nom du workflow qui a été exécuté"
     required: true
-    type: string
   environment:
+    description: "Environnement dans lequel le workflow a été exécuté (par exemple, 'production', 'staging')"
     required: true
-    type: string
     
 runs:
   using: "composite" 
@@ -78,3 +78,8 @@ runs:
       shell: bash
       run: |
         aws s3 cp log.json s3://${{ inputs.bucket }}/logs/${{ inputs.workflow }}/run-${{ github.run_id }}.json
+
+    - name: Nettoyer les fichiers temporaires
+      run: |
+        rm -f log.json
+      shell: bash
