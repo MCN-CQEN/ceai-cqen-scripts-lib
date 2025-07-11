@@ -1,0 +1,85 @@
+name: Journalisation des logs des tests et des déploiements
+description: |
+  Ce workflow enregistre les logs des tests et des déploiements dans un bucket S3.
+  Il est déclenché par d'autres workflows via l'événement `workflow_call`.
+  Il utilise AWS IAM pour assumer un rôle spécifique et stocker les logs au format JSON.
+  Les logs sont utiles pour le suivi des déploiements et des tests dans différents environnements.
+
+inputs:
+  bucket:
+    description: "Nom du bucket S3 où les logs seront stockés"
+    required: true
+  region:
+    description: "Région AWS où le bucket S3 est situé"
+    required: true
+  role-to-assume:
+    description: "ARN du rôle IAM à assumer pour accéder au bucket S3"
+    required: true
+  status:
+    description: "Statut de l'exécution (par exemple, 'success', 'failure')"
+    required: true
+  message:
+    description: "Message descriptif de l'exécution (par exemple, 'Tests réussis', 'Déploiement échoué')"
+    required: true
+  workflow:
+    description: "Nom du workflow qui a été exécuté"
+    required: true
+  environment:
+    description: "Environnement dans lequel le workflow a été exécuté (par exemple, 'production', 'staging')"
+    required: true
+    
+runs:
+  using: "composite" 
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+        
+    - name: "Configure AWS credentials for role"
+      uses: aws-actions/configure-aws-credentials@v4          
+      with:                
+        role-to-assume: ${{ inputs.role-to-assume }}
+        role-session-name: GitHub_to_AWS_via_FederatedOIDC
+        aws-region: ${{ inputs.region }} 
+            
+    - name: Construire le fichier JSON
+      shell: bash
+      run: |
+        jq -n \
+          --arg workflow "${{ inputs.workflow }}" \
+          --arg status "${{ inputs.status }}" \
+          --arg message "${{ inputs.message }}" \
+          --arg environment "${{ inputs.environment }}" \
+          --arg timestamp "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+          --arg run_id "${{ github.run_id }}" \
+          --arg actor "${{ github.actor }}" \
+          --arg event_name "${{ github.event_name }}" \
+          --arg repo_owner "${{ github.repository_owner }}" \
+          --arg repo_name "${{ github.event.repository.name }}" \
+          --arg full_name "${{ github.repository }}" \
+          '{
+            workflow: $workflow,
+            status: $status,
+            message: $message,
+            environment: $environment,
+            timestamp: $timestamp,
+            run_id: $run_id,
+            actor: $actor,
+            event_name: $event_name,
+            repository_owner: $repo_owner,
+            repository_name: $repo_name,
+            repository_full_name: $full_name
+          }' > log.json       
+
+    - name: Afficher le log
+      shell: bash
+      run: cat log.json
+
+    - name: Upload to S3
+      shell: bash
+      run: |
+        aws s3 cp log.json s3://${{ inputs.bucket }}/logs/${{ inputs.workflow }}/run-${{ github.run_id }}.json
+
+    - name: Nettoyer les fichiers temporaires
+      run: |
+        rm -f log.json
+      shell: bash
