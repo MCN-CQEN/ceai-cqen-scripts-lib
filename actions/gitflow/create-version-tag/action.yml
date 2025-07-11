@@ -1,0 +1,43 @@
+name: "Créer l'étiquette (tag) de version"
+description: "Créer une étiquette (tag) de version avec le semver fourni en entrée."
+inputs:
+  semVer:
+    description: "Version de semver pour créer le tag"
+    required: true
+    
+runs:
+  using: "composite"
+  steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
+  
+  - name: Préparer le path github pour la prochaine étape
+    run: echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+    shell: bash
+    env:
+      GITHUB_ACTION_PATH: ${{ github.action_path }}
+
+  - name: Vérifier si le commit a déjà un tag de version
+    shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }} 
+      COMMIT_SHA: ${{ github.sha }}
+      GH_REF_NAME: ${{ github.ref_name }}
+    run: check_version_tag.sh
+   
+  - name: Ne pas créer le tag si le commit a déjà un tag
+    if: env.COMMIT_HAS_TAG == 'true'
+    shell: bash
+    run: |
+      echo "⚠️ Ce commit a déjà une étiquette de version"
+
+  - name: Créer le tag et archiver
+    if: env.COMMIT_HAS_TAG == 'false'
+    shell: bash
+    run: |
+        TAG_NAME="${{ inputs.semVer }}"
+        git config user.name "${{ github.actor }}"
+        git config user.email "${{ github.actor }}@users.noreply.github.com"
+        git tag $TAG_NAME
+        git push origin $TAG_NAME
+       
