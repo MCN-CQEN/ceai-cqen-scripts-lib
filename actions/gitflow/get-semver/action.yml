@@ -20,7 +20,7 @@ inputs:
 
 outputs:
   semVer:
-    description: "Version de semver (<majeure>.<mineure>.<revision> pour prod ou <majeure>.<mineure>.<revision>-<etiquette>.<SHA>)"
+    description: "Version de semver (<majeure>.<mineure>.<revision> pour 'main' ou <majeure>.<mineure>.<revision>-<etiquette>.<SHA>)"
     value: ${{ steps.calculerVersion.outputs.semVer }}
     
 runs:

@@ -2,7 +2,7 @@
 
 Ce dossier contient des Github Actions réutilisables facilitant la mise en oeuvre du GitFlow dans les dépôts de code du CQEN (mais notez que ces actions sont assez agnostiques pour être utilisées en dehors du CQEN)
 
-> Note sur les noms des branches : `main` et `prod` sont synonymes, ainsi que `develop`  et `dev`. Ils sont interchangeables, mais dans un même dépôt, il faut faire un choix et toujours utiliser les mêmes valeurs.
+> Note sur les noms des branches : `main`, `master` et `prod` sont synonymes. `develop` et `dev` sont synonymes. Ils sont interchangeables, mais dans un même dépôt, il faut faire un choix et toujours utiliser les mêmes valeurs.
 
 ## Comment utiliser le gitflow dans votre projet
 
@@ -10,46 +10,42 @@ Voici les étapes, au CQEN, pour créer un dépôt de code et l'initialiser de s
 
 TL;DR, voici un résumé des étapes
 1. Créer le dépôt sur Github
-2. Créer les deux branches `prod` et `dev`
-3. Cloner localement la branche `dev``
+   1. Spécifier la licence LiLiQ-R (TODO)
+2. Renommez la branche par défaut à `main` (si ce n'est pas déjà le cas)
+3. Cloner localement la branche `main`
 4. Créer les fichiers
     - `.github/workflows/gitflow_create_version.yml`
     - `.github/workflows/gitflow_valider_pr.yml`
     - `./GitVersion.yml`
 5. `commit` et `push` vers Github
-6. Dans Github, merge `dev` dans `prod` 
-7. Créer les restrictions sur les branches.
+6. Créer la branche `dev` (basée sur `main`)
+7. Pousser la branche `dev` vers GithHub
+9. Créer les restrictions sur les branches.
 
 
-### 1. Faites créer un dépôt à l'aide du script commun
+### 1. Créer un dépôt et définir les deux branches principales
 
-Si vous n'avez pas les accès nécessaires, demandez qu'on vous créé un dépôt à l'aide des scripts du dépôt https://github.com/CQEN-QDCE/CreerDepotCQEN.
+- Créez un nouveau dépôt de code.
+  - La branche créée par défaut devrait être nommée `main`. Vous pouvez changer son nom à `master` ou `prod`, mais `main` est généralement reconnu comme la branche principale d'un dépôt implémentant le GitFlow.
+- Ajouter la licence LiLiQ-R
+> ⚠️ TODO : Ajouter la procédure pour ajouter la licence.
 
-### 2. Créer les deux branches principales, ou conserver celles créées avec le script mentionné ci-avant.
-- Branches créées avec script **[méthode recommandée]** :
-    - `prod` : branche par défaut
-    - `dev` : branche de développement
-- Si vous créez les branches par vous-même :
-    - Une branche `main`, `master` ou `prod`: si ce n'est pas déjà le cas, définir en tant que branche principale.
-    - Une branche `develop` ou `dev` 
 
-Ces deux branches seront ultérieurement protégées contre la suppression et d'autres scénarios.
+### 2. Cloner le repo localement
 
-### 3. Cloner le repo localement
-
-Clonez le repo en pointant sur la branche `dev` (ou *develop*, selon votre choix à l'étape précédente).
+Clonez le repo en pointant sur la branche `main` (ou *develop*, selon votre choix à l'étape précédente).
 
 ```sh
-git clone -b dev [url_repo]
+git clone [url_repo]
 ```
 
 Vous pourrez pousser le code directement dans cette branche, avant que les restrictions ne soient appliquées (ces restrictions seront mises en place en tout dernier).
 
-### 4. Créer les fichiers
+### 3. Créer les fichiers
 
 #### Un workflow pour générer les versions
 
-Créer un nouveau workflow sous `.github/workflows/` (le nom n'a pas d'importance). Copiez le code suivant (en adaptant les nom des branches `prod` et `dev` à vos besoins) :
+Créer un nouveau workflow sous `.github/workflows/` (le nom n'a pas d'importance). Copiez le code suivant (en adaptant les nom des branches `main` et `dev` si requis) :
 
 ```yaml
 # .github/workflows/gitflow_create_version.yml
@@ -61,7 +57,7 @@ on:
       - feature/*
       - release/*
       - hotfix/*
-      - prod
+      - main
       - dev
 jobs:
   get_semver_version:
@@ -76,18 +72,18 @@ jobs:
 
     - name: Obtenir version
       id: obtenir_version
-      uses: MCN-CQEN/ceai-cqen-commons/actions/gitflow/actions/get-semver
-      with:
-        mainBranchName: prod
+      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/get-semver 
+      # FIXME : ⚠️ Ce lien ne fonctionnera pas tant que la PR ne sera pas mergée : en attendant, utiliser le lien MCN-CQEN/ceai-cqen-scripts-lib/tree/feature/actions-gitflow/actions/gitflow/get-semver
       
     - name: Créer le tag
       id: creer_tag
-      uses: MCN-CQEN/ceai-cqen-commons/actions/gitflow/actions/create-version-tag # TODO : remplacer avec le lien vers l'action commune
+      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/create-version-tag 
+      # FIXME : ⚠️ Ce lien ne fonctionnera pas tant que la PR ne sera pas mergée : en attendant, utiliser le lien MCN-CQEN/ceai-cqen-scripts-lib/tree/feature/actions-gitflow/actions/gitflow/create-version-tag
       with:
         semVer: ${{ steps.obtenir_version.outputs.semVer }}
 ```
 
-Explications :
+Explications : 
 1. Le workflow sera activé par un push sur une des branches spécifiées (`feature/*`, `release/*`, `hotfix/*`, `prod`, `dev`).
 2. Les permissions sont octroyées pour, entre autres, permettre à l'action de créer des tags de version.
 3. L'action commune `get-semver` est appelée pour calculer la prochaine version
@@ -115,7 +111,8 @@ jobs:
         
       - name: Validation du PR
         id: valider_pr
-        uses: MCN-CQEN/ceai-cqen-commons/actions/gitflow/validate-pr
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/validate-pr
+        # FIXME : ⚠️ Ce lien ne fonctionnera pas tant que la PR ne sera pas mergée : en attendant, utiliser le lien MCN-CQEN/ceai-cqen-scripts-lib/tree/feature/actions-gitflow/actions/gitflow/validate-pr
         with:
           nom_branche_dest: ${{ github.base_ref }}
           nom_branche_source: ${{ github.head_ref }}
@@ -136,8 +133,8 @@ La librairie derrière le versionnage est [GitVersion](https://gitversion.net/).
 ```yaml
 # ./GitVersion.yml
 
-# Décommentez l'option ci-dessous si vous souhaitez forcer un changement de version. Elle fait la même chose que de créer une branche release/x.x.x
-# next-version: 1.0.0
+# L'option ci-dessous Initialisera le repo à la version 0.0.0
+next-version: 0.0.0
 
 workflow: GitFlow/v1
 branches:
@@ -162,24 +159,34 @@ branches:
     label: 'hotfix-{BranchName}'
 ```
 
-### 5. Commit et Push dans `dev` (ou *develop*)
+### 4. Commit et Push dans `main` 
 
-Faites un *commit* de votre projet dans la branche `dev`, et ensuite poussez les changements vers le repo.
+Faites un *commit* de votre projet dans la branche `prod`, et ensuite poussez les changements vers le repo.
 
 ```sh
 git add .
-git commit -S -s -m "Ajout des workflow pour automatiser la création des étiquette de version et la vérification des pull request."
-git push origin dev
+git commit -S -s -m "Ajout des workflows pour automatiser la création des étiquettes de version et la vérification des pull requests."
+git push
 ```
 
-### 6. Merge dans `prod` (ou *main*, ou *master*)
+### 5. Créer la branche dev et la pousser sur Github
 
-Allez dans *GitHub*, et démarrez une *pull request* de `dev` vers `prod`.
+Créez localement une nouvelle branche `dev` et poussez-la sur Github :
 
-Pour le moment, les règles ne sont pas actives, donc il ne devrait pas y avoir de problème (il se peut cependant que la branche `prod` requiert des approbations de la part de réviseurs).
+```sh
+git checkout -b dev
+git push --set-upstream origin dev
+```
+
+Pour le moment, les règles ne sont pas actives, donc il ne devrait pas y avoir de problème.
+
+### 6. Si requis, nettoyer les `tags` créés automatiquement
+
+> TODO : Ajouter la procédure pour supprimer les tags.
+
 
 ### 7. Créer les restrictions de branches :
-Une fois la *pull request* terminée et approuvée, vous pouvez créer les protections sur les branches.
+Vous pouvez maintenant créer les protections sur les branches.
 
 Pour se faire, allez dans les paramètres de votre dépôt, puis dans la section "Rules" (si vous n'avez pas accès à cette section, vous devez demander les accès nécessaires). 
 
@@ -190,7 +197,7 @@ Pour se faire, allez dans les paramètres de votre dépôt, puis dans la section
 2. Nommez votre règle *"Protection des pull request"*
 3. Activez la règle en sélectionnant **Active** sous *Enforcement status*.
      > ![alt text](./docs/images/repo-branch-ruleset-enforcement-status.jpg)
-2. Ajoutez les branches `prod` (*Default*) et `dev` comme *targets*.
+2. Ajoutez les branches `main` (*Default*) et `dev` comme *targets*.
      > ![alt text](./docs/images/repo-branch-ruleset-target-branches.jpg)
 3. Activez les options 
     1. *Restrict deletions*

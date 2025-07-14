@@ -127,7 +127,7 @@ describe('Main action function', () => {
         expect(core.setOutput).toHaveBeenCalledWith('accepted', true);
     })
 
-    it("Tombe dans le carch (du try) en cas d'erreur innattendue", async () => {
+    it("Tombe dans le catch (du try) en cas d'erreur inattendue", async () => {
     	// Arrange
         core.getInput.mockImplementation((name) => {
             switch (name) {
@@ -200,4 +200,13 @@ describe("parseRestrictionBranches", () => {
         // Act & Assert
         expect(() => parseRestrictionBranches(malformedJson)).toThrow(/Erreur lors de l'analyse des restrictions de branches/);
     });
+
+    if("devrait lever une erreur si le JSON contient des propriétés manquantes", () => {
+        // Arrange
+        const missingPropertiesJson = '[{"branch":"master","type":"regex"}]';
+
+        // Act & Assert
+        expect(() => parseRestrictionBranches(missingPropertiesJson)).toThrow(/Format des restrictions de branches invalide/);
+    });
+    
 })

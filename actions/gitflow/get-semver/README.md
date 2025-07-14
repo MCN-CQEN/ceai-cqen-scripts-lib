@@ -9,7 +9,7 @@ Respecte les règles de versionnage définies pour le CQEN :
 | `feature` | 1.2.0-feature.nouvel-ecran+ca1f980 |
 | `dev`     | 1.2.0-dev+865860e                  |
 | `release` | 2.0.0-rc.1                         |
-| `prod`    | 2.0.0                              |
+| `main`    | 2.0.0                              |
 | `hotfix`  | 2.0.1-hotfix.CVE-1234+f03cd2a      |
 | `support` | 2.0.1-support+ec13609              |
 
@@ -20,8 +20,8 @@ Respecte les règles de versionnage définies pour le CQEN :
 |------------------------|----------|----------------|
 | buildNumberField       | `string` | Nom de la variable retournée par GitVersion qui contient le numéro de build. |
 | preReleaseNumberField  | `string` | Nom de la variable retournée par GitVersion qui contient le numéro de build du release. |
-| mainBranchNameRegex    | `regex` | Regex de la branche main |
-| releaseBranchNameRegex | `regex` | Regex de la branche release |
+| mainBranchNameRegex    | `regex`  | Regex de la branche main |
+| releaseBranchNameRegex | `regex`  | Regex de la branche release |
 | versionPrefix          | `string` | Préfixe de la version (ex : 'v') qui sera systématiquement ajouté au début du tag de version"  |
 
 
