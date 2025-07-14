@@ -1,0 +1,22 @@
+name: 'Action de vérification de pull request gitflow'
+description: |
+  Cette action permet de valider les pull requests en tenant compte des restrictions sur les branches gitflow. 
+  Par exemple, une branche feature ne peut être fusionnée qu'avec la branche develop
+inputs:
+  nom_branche_dest: 
+    description: 'Le nom de la branche'
+    required: true
+  nom_branche_source: 
+    description: "Le nom de la branche d'origine"
+    required: true
+  restrictions_branches: 
+    description: 'Les restrictions des branches'
+    required: false
+outputs:
+  time:
+    description: "Temps d'exécution"
+  accepted:
+    description: 'La PR a été acceptée, ou non'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
