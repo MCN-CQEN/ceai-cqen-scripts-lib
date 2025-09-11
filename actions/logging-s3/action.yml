@@ -33,13 +33,23 @@ runs:
   steps:
     - name: Checkout code
       uses: actions/checkout@v3
+
+    - name: get caller identity 1
+      shell: bash 
+      run: |
+        aws sts get-caller-identity
         
     - name: "Configure AWS credentials for role"
-      uses: aws-actions/configure-aws-credentials@v4          
+      uses: aws-actions/configure-aws-credentials@v5.0.0        
       with:                
         role-to-assume: ${{ inputs.role-to-assume }}
         role-session-name: GitHub_to_AWS_via_FederatedOIDC
-        aws-region: ${{ inputs.region }} 
+        aws-region: ${{ inputs.region }}
+        
+    - name: get caller identity 2
+      shell: bash 
+      run: |
+        aws sts get-caller-identity
             
     - name: Construire le fichier JSON
       shell: bash
