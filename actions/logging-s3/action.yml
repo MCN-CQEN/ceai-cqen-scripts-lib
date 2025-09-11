@@ -12,7 +12,7 @@ inputs:
   region:
     description: "Région AWS où le bucket S3 est situé"
     required: true
-  role-to-assume:
+  role_to_assume:
     description: "ARN du rôle IAM à assumer pour accéder au bucket S3"
     required: true
   status:
@@ -34,17 +34,12 @@ runs:
     - name: Checkout code
       uses: actions/checkout@v3
         
-    - name: "Configure AWS credentials for role"
+    - name: "Configure AWS credentials for role for ${{ inputs.role_to_assume }}"
       uses: aws-actions/configure-aws-credentials@v5.0.0        
       with:                
-        role-to-assume: ${{ inputs.role-to-assume }}
+        role-to-assume: ${{ inputs.role_to_assume }}
         role-session-name: GitHub_to_AWS_via_FederatedOIDC
         aws-region: ${{ inputs.region }}
-        
-    - name: get caller identity 2
-      shell: bash 
-      run: |
-        aws sts get-caller-identity
             
     - name: Construire le fichier JSON
       shell: bash
