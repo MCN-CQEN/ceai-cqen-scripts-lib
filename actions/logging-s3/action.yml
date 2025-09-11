@@ -33,11 +33,6 @@ runs:
   steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
-    - name: get caller identity 1
-      shell: bash 
-      run: |
-        aws sts get-caller-identity
         
     - name: "Configure AWS credentials for role"
       uses: aws-actions/configure-aws-credentials@v5.0.0        
