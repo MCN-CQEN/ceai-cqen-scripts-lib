@@ -1,0 +1,24 @@
+# L'option ci-dessous Initialisera le repo à la version 0.0.0
+next-version: 0.1.0
+
+workflow: GitFlow/v1
+branches:
+  main:
+    regex: ^master$|^main$|^prod$
+    label: ''
+    
+  develop:
+    regex: ^dev(elop)?(ment)?$
+    label: dev
+
+  feature:
+    regex: ^feature[\/-](?<BranchName>.+)
+    label: 'feature-{BranchName}'
+
+  release:
+    regex: ^release[\/-](?<BranchName>.+)
+    label: rc
+
+  hotfix:
+    regex: ^hotfix[\/-](?<BranchName>.+)
+    label: 'hotfix-{BranchName}'

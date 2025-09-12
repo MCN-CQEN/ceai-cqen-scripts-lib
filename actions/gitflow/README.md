@@ -72,13 +72,11 @@ jobs:
 
     - name: Obtenir version
       id: obtenir_version
-      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/get-semver 
-      # FIXME : ⚠️ Ce lien ne fonctionnera pas tant que la PR ne sera pas mergée : en attendant, utiliser le lien MCN-CQEN/ceai-cqen-scripts-lib/tree/feature/actions-gitflow/actions/gitflow/get-semver
+      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/get-semver@main
       
     - name: Créer le tag
       id: creer_tag
-      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/create-version-tag 
-      # FIXME : ⚠️ Ce lien ne fonctionnera pas tant que la PR ne sera pas mergée : en attendant, utiliser le lien MCN-CQEN/ceai-cqen-scripts-lib/tree/feature/actions-gitflow/actions/gitflow/create-version-tag
+      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/create-version-tag@main
       with:
         semVer: ${{ steps.obtenir_version.outputs.semVer }}
 ```
@@ -111,8 +109,7 @@ jobs:
         
       - name: Validation du PR
         id: valider_pr
-        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/validate-pr
-        # FIXME : ⚠️ Ce lien ne fonctionnera pas tant que la PR ne sera pas mergée : en attendant, utiliser le lien MCN-CQEN/ceai-cqen-scripts-lib/tree/feature/actions-gitflow/actions/gitflow/validate-pr
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/validate-pr@main
         with:
           nom_branche_dest: ${{ github.base_ref }}
           nom_branche_source: ${{ github.head_ref }}
@@ -134,7 +131,7 @@ La librairie derrière le versionnage est [GitVersion](https://gitversion.net/).
 # ./GitVersion.yml
 
 # L'option ci-dessous Initialisera le repo à la version 0.0.0
-next-version: 0.0.0
+next-version: 0.1.0
 
 workflow: GitFlow/v1
 branches:
