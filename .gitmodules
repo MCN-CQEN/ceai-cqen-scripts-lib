@@ -1,0 +1,21 @@
+[submodule "actions/gitflow/create-version-tag/test/bats"]
+	path = actions/gitflow/create-version-tag/test/bats
+	url = https://github.com/bats-core/bats-core.git
+[submodule "actions/gitflow/create-version-tag/test/test_helper/bats-support"]
+	path = actions/gitflow/create-version-tag/test/test_helper/bats-support
+	url = https://github.com/bats-core/bats-support.git
+[submodule "actions/gitflow/create-version-tag/test/test_helper/bats-assert"]
+	path = actions/gitflow/create-version-tag/test/test_helper/bats-assert
+	url = https://github.com/bats-core/bats-assert.git
+[submodule "actions/gitflow/get-semver/test/bats"]
+	path = actions/gitflow/get-semver/test/bats
+	url = https://github.com/bats-core/bats-core.git
+[submodule "actions/gitflow/get-semver/test/test_helper/bats-support"]
+	path = actions/gitflow/get-semver/test/test_helper/bats-support
+	url = https://github.com/bats-core/bats-support.git
+[submodule "actions/gitflow/get-semver/test/test_helper/bats-assert"]
+	path = actions/gitflow/get-semver/test/test_helper/bats-assert
+	url = https://github.com/bats-core/bats-assert.git
+[submodule "actions/gitflow/create-version-tag/test/test_helper/bats-mock"]
+	path = actions/gitflow/create-version-tag/test/test_helper/bats-mock
+	url = https://github.com/jasonkarns/bats-mock

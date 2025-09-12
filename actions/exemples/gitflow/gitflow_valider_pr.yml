@@ -1,0 +1,18 @@
+name: "Validation du PR sur main ou develop"
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+jobs:
+  gitflow_on_pr_main_or_develop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+        
+      - name: Validation du PR
+        id: valider_pr
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/validate-pr@main
+        with:
+          nom_branche_dest: ${{ github.base_ref }}
+          nom_branche_source: ${{ github.head_ref }}

@@ -1,0 +1,29 @@
+name: "Créer le tag de version"
+on:
+  push:
+    branches:
+      - feature/*
+      - release/*
+      - hotfix/*
+      - main
+      - dev
+jobs:
+  get_semver_version:
+    name: Calculer la version et appliquer le tag
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Obtenir version
+      id: obtenir_version
+      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/get-semver@main
+      
+    - name: Créer le tag
+      id: creer_tag
+      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/gitflow/create-version-tag@main
+      with:
+        semVer: ${{ steps.obtenir_version.outputs.semVer }}
