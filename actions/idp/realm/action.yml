@@ -8,16 +8,16 @@ inputs:
     description: "Chemin du fichier JSON du realm à déployer"
     required: true
   environment:
-    description: 'Environment to deploy to (dev, test, prod)'
+    description: "Environment de deploiement (dev, preprod, prod)"
     required: true
   keycloak_url:
-    description: 'Keycloak URL (can be overridden, otherwise uses secret)'
+    description: "Keycloak URL"
     required: false
-  keycloak_admin_username:
-    description: 'Keycloak admin username'
+  keycloak_username:
+    description: "Keycloak username"
     required: true
-  keycloak_admin_password:
-        description: 'Keycloak admin password'
+  keycloak_password:
+        description:" Keycloak password"
         required: true
 
 runs:
@@ -50,7 +50,7 @@ runs:
         echo "REALM_NAME=$REALM_NAME" >> $GITHUB_ENV
         echo "Realm validé: $REALM_NAME"
 
-    - name: Extract realm name
+    - name: Extraction du realm name
       id: realm
       run: |
         REALM_NAME=$(jq -r '.realm' "$realm-file")
@@ -63,8 +63,8 @@ runs:
         TOKEN=$(curl -s -X POST "$keycloak_url/realms/master/protocol/openid-connect/token" \
           -H "Content-Type: application/x-www-form-urlencoded" \
           -d "client_id=admin-cli" \
-          -d "username=$keycloak_admin_username" \
-          -d "password=$keycloak_admin_username" \
+          -d "username=$keycloak_username" \
+          -d "password=$keycloak_password" \
           -d "grant_type=password" | jq -r .access_token)
         echo "token=$TOKEN" >> $GITHUB_OUTPUT
           
