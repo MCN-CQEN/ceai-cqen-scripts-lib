@@ -1,0 +1,150 @@
+name: Deploy Keycloak Realm
+description: |
+  Déploie ou met à jour un realm Keycloak à partir d’un fichier JSON.
+  Vérifie si le realm existe déjà, le crée sinon, ou le met à jour si nécessaire.
+
+inputs:
+  realm-file:
+    description: "Chemin du fichier JSON du realm à déployer"
+    required: true
+  environment:
+    description: 'Environment to deploy to (dev, test, prod)'
+    required: true
+  keycloak_url:
+    description: 'Keycloak URL (can be overridden, otherwise uses secret)'
+    required: false
+  keycloak_admin_username:
+    description: 'Keycloak admin username'
+    required: true
+  keycloak_admin_password:
+        description: 'Keycloak admin password'
+        required: true
+
+runs:
+  using: "composite" 
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install jq and curl
+      run: sudo apt-get update && sudo apt-get install -y jq curl
+
+    - name: Valider le fichier JSON
+      run: |
+        if [ ! -f "realm-file" ]; then
+          echo "Fichier $realm-file introuvable"
+          exit 1
+        fi
+          
+        if ! jq empty "$realm-file"; then
+          echo "Fichier JSON invalide"
+          exit 1
+        fi
+          
+        REALM_NAME=$(jq -r '.realm // empty' "$realm-file")
+        if [ -z "$REALM_NAME" ]; then
+          echo "Le champ 'realm' est manquant"
+          exit 1
+        fi
+          
+        echo "REALM_NAME=$REALM_NAME" >> $GITHUB_ENV
+        echo "Realm validé: $REALM_NAME"
+
+    - name: Extract realm name
+      id: realm
+      run: |
+        REALM_NAME=$(jq -r '.realm' "$realm-file")
+        echo "name=$REALM_NAME" >> $GITHUB_OUTPUT
+        echo "Realm cible: $REALM_NAME"
+
+    - name: Get access token
+      id: get-token
+      run: |
+        TOKEN=$(curl -s -X POST "$keycloak_url/realms/master/protocol/openid-connect/token" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "client_id=admin-cli" \
+          -d "username=$keycloak_admin_username" \
+          -d "password=$keycloak_admin_username" \
+          -d "grant_type=password" | jq -r .access_token)
+        echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          
+    - name: Check if realm exists
+      id: check-realm
+      run: |
+        STATUS=$(curl -s -o existing_realm.json -w "%{http_code}" \
+          -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+          "$keycloak_url/admin/realms/$REALM_NAME")
+        echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+    - name: Debug realm status
+      run: |
+        echo "Realm check status: ${{ steps.check-realm.outputs.status }}"
+        if [ -f existing_realm.json ]; then
+          cat existing_realm.json | jq .
+        fi
+
+    - name: Create new realm
+      if: steps.check-realm.outputs.status == '404'
+      run: |
+        echo "Création du nouveau realm: $REALM_NAME"
+            
+        RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST \
+          "$keycloak_url/admin/realms" \
+          -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+          -H "Content-Type: application/json" \
+          --data-binary @"$realm-file")
+            
+        HTTP_CODE=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+        BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
+            
+        if [ "$HTTP_CODE" -eq 201 ] || [ "$HTTP_CODE" -eq 204 ]; then
+          echo "Realm créé avec succès"
+        else
+          echo "Échec de la création du realm (HTTP $HTTP_CODE)"
+          echo "$BODY"
+          exit 1
+        fi
+  
+    - name: Update existing realm
+      if: steps.check-realm.outputs.status == '200'
+      run: |
+        echo "Comparaison et mise à jour du realm existant"
+
+        jq 'del(.id, .notBefore, .revokeRefreshToken, .refreshTokenMaxReuse, .accessTokenLifespan, .accessTokenLifespanForImplicitFlow, .ssoSessionIdleTimeout, .ssoSessionMaxLifespan, .offlineSessionIdleTimeout, .accessCodeLifespan, .accessCodeLifespanUserAction, .accessCodeLifespanLogin, .actionTokenGeneratedByAdminLifespan, .actionTokenGeneratedByUserLifespan, .oauth2DeviceCodeLifespan, .oauth2DevicePollingInterval)' existing_realm.json > existing_clean.json
+          
+        jq 'del(.id, .notBefore, .revokeRefreshToken, .refreshTokenMaxReuse, .accessTokenLifespan, .accessTokenLifespanForImplicitFlow, .ssoSessionIdleTimeout, .ssoSessionMaxLifespan, .offlineSessionIdleTimeout, .accessCodeLifespan, .accessCodeLifespanUserAction, .accessCodeLifespanLogin, .actionTokenGeneratedByAdminLifespan, .actionTokenGeneratedByUserLifespan, .oauth2DeviceCodeLifespan, .oauth2DevicePollingInterval)' "$realm-file" > new_clean.json
+
+
+        if ! diff -q existing_clean.json new_clean.json >/dev/null 2>&1; then
+          echo "Différences détectées, mise à jour en cours..."
+
+          curl -s -X PUT "$keycloak_url/admin/realms/$REALM_NAME" \
+              -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+              -H "Content-Type: application/json" \
+              --data-binary @"$realm-file"
+        else
+          echo "Aucune modification détectée, realm inchangé"
+        fi
+
+    - name: Verify deployment
+      run: |
+        echo "Vérification finale du déploiement"
+            
+        STATUS=$(curl -s -w "%{http_code}" -o /dev/null \
+          -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+          "$keycloak_url/admin/realms/$REALM_NAME")
+            
+        if [ "$STATUS" = "200" ]; then
+          echo "Déploiement vérifié avec succès"
+          echo "Realm '$REALM_NAME' est accessible"
+        else
+          echo "Échec de la vérification (HTTP $STATUS)"
+          exit 1
+        fi
+  
+    - name: Cleanup temporary files
+      if: always()
+      run: |
+        rm -f existing_realm.json existing_clean.json new_clean.json
+
+  
