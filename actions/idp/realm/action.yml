@@ -7,9 +7,6 @@ inputs:
   realm-file:
     description: "Chemin du fichier JSON du realm à déployer"
     required: true
-  environment:
-    description: "Environment de deploiement (dev, preprod, prod)"
-    required: true
   keycloak_url:
     description: "Keycloak URL"
     required: false
