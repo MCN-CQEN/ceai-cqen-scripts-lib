@@ -28,18 +28,20 @@ runs:
       shell: bash
 
     - name: Valider le fichier JSON
+      env:
+        REALM_FILE: ${{ inputs.realm-file }}
       run: |
-        if [ ! -f "realm-file" ]; then
-          echo "Fichier $realm-file introuvable"
+        if [ ! -f "REALM_FILE" ]; then
+          echo "Fichier $REALM_FILE introuvable"
           exit 1
         fi
           
-        if ! jq empty "$realm-file"; then
+        if ! jq empty "$REALM_FILE"; then
           echo "Fichier JSON invalide"
           exit 1
         fi
           
-        REALM_NAME=$(jq -r '.realm // empty' "$realm-file")
+        REALM_NAME=$(jq -r '.realm // empty' "$REALM_FILE")
         if [ -z "$REALM_NAME" ]; then
           echo "Le champ 'realm' est manquant"
           exit 1
@@ -52,7 +54,7 @@ runs:
     - name: Extraction du realm name
       id: realm
       run: |
-        REALM_NAME=$(jq -r '.realm' "$realm-file")
+        REALM_NAME=$(jq -r '.realm' "$REALM_FILE")
         echo "name=$REALM_NAME" >> $GITHUB_OUTPUT
         echo "Realm cible: $REALM_NAME"
       shell: bash
@@ -95,7 +97,7 @@ runs:
           "$keycloak_url/admin/realms" \
           -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
           -H "Content-Type: application/json" \
-          --data-binary @"$realm-file")
+          --data-binary @"$REALM_FILE")
             
         HTTP_CODE=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
         BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
@@ -116,7 +118,7 @@ runs:
 
         jq 'del(.id, .notBefore, .revokeRefreshToken, .refreshTokenMaxReuse, .accessTokenLifespan, .accessTokenLifespanForImplicitFlow, .ssoSessionIdleTimeout, .ssoSessionMaxLifespan, .offlineSessionIdleTimeout, .accessCodeLifespan, .accessCodeLifespanUserAction, .accessCodeLifespanLogin, .actionTokenGeneratedByAdminLifespan, .actionTokenGeneratedByUserLifespan, .oauth2DeviceCodeLifespan, .oauth2DevicePollingInterval)' existing_realm.json > existing_clean.json
           
-        jq 'del(.id, .notBefore, .revokeRefreshToken, .refreshTokenMaxReuse, .accessTokenLifespan, .accessTokenLifespanForImplicitFlow, .ssoSessionIdleTimeout, .ssoSessionMaxLifespan, .offlineSessionIdleTimeout, .accessCodeLifespan, .accessCodeLifespanUserAction, .accessCodeLifespanLogin, .actionTokenGeneratedByAdminLifespan, .actionTokenGeneratedByUserLifespan, .oauth2DeviceCodeLifespan, .oauth2DevicePollingInterval)' "$realm-file" > new_clean.json
+        jq 'del(.id, .notBefore, .revokeRefreshToken, .refreshTokenMaxReuse, .accessTokenLifespan, .accessTokenLifespanForImplicitFlow, .ssoSessionIdleTimeout, .ssoSessionMaxLifespan, .offlineSessionIdleTimeout, .accessCodeLifespan, .accessCodeLifespanUserAction, .accessCodeLifespanLogin, .actionTokenGeneratedByAdminLifespan, .actionTokenGeneratedByUserLifespan, .oauth2DeviceCodeLifespan, .oauth2DevicePollingInterval)' "$REALM_FILE" > new_clean.json
 
 
         if ! diff -q existing_clean.json new_clean.json >/dev/null 2>&1; then
@@ -125,7 +127,7 @@ runs:
           curl -s -X PUT "$keycloak_url/admin/realms/$REALM_NAME" \
               -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
               -H "Content-Type: application/json" \
-              --data-binary @"$realm-file"
+              --data-binary @"$REALM_FILE"
         else
           echo "Aucune modification détectée, realm inchangé"
         fi
