@@ -25,6 +25,7 @@ runs:
 
     - name: Install jq and curl
       run: sudo apt-get update && sudo apt-get install -y jq curl
+      shell: bash
 
     - name: Valider le fichier JSON
       run: |
@@ -46,6 +47,7 @@ runs:
           
         echo "REALM_NAME=$REALM_NAME" >> $GITHUB_ENV
         echo "Realm validé: $REALM_NAME"
+      shell: bash
 
     - name: Extraction du realm name
       id: realm
@@ -53,6 +55,7 @@ runs:
         REALM_NAME=$(jq -r '.realm' "$realm-file")
         echo "name=$REALM_NAME" >> $GITHUB_OUTPUT
         echo "Realm cible: $REALM_NAME"
+      shell: bash
 
     - name: Get access token
       id: get-token
@@ -64,7 +67,8 @@ runs:
           -d "password=$keycloak_password" \
           -d "grant_type=password" | jq -r .access_token)
         echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          
+      shell: bash 
+
     - name: Check if realm exists
       id: check-realm
       run: |
@@ -72,6 +76,7 @@ runs:
           -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
           "$keycloak_url/admin/realms/$REALM_NAME")
         echo "status=$STATUS" >> $GITHUB_OUTPUT
+      shell: bash
 
     - name: Debug realm status
       run: |
@@ -79,6 +84,7 @@ runs:
         if [ -f existing_realm.json ]; then
           cat existing_realm.json | jq .
         fi
+      shell: bash
 
     - name: Create new realm
       if: steps.check-realm.outputs.status == '404'
@@ -101,7 +107,8 @@ runs:
           echo "$BODY"
           exit 1
         fi
-  
+      shell: bash
+
     - name: Update existing realm
       if: steps.check-realm.outputs.status == '200'
       run: |
@@ -122,6 +129,7 @@ runs:
         else
           echo "Aucune modification détectée, realm inchangé"
         fi
+      shell: bash
 
     - name: Verify deployment
       run: |
@@ -138,10 +146,11 @@ runs:
           echo "Échec de la vérification (HTTP $STATUS)"
           exit 1
         fi
-  
+      shell: bash
+
     - name: Cleanup temporary files
       if: always()
       run: |
         rm -f existing_realm.json existing_clean.json new_clean.json
-
+      shell: bash
   
