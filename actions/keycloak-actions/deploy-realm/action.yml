@@ -31,7 +31,7 @@ runs:
       env:
         REALM_FILE: ${{ inputs.realm-file }}
       run: |
-        if [ ! -f "REALM_FILE" ]; then
+        if [ ! -f "$REALM_FILE" ]; then
           echo "Fichier $REALM_FILE introuvable"
           exit 1
         fi
