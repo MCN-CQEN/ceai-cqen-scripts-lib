@@ -15,7 +15,7 @@ jobs:
     environment: test
     steps:
       - name: Déploiement du Realm test
-        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/keycloak-actions/deploy-realm@main # Chemin vers votre action
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/keycloak-actions/deploy-realm@main # Chemin vers votre action 
         with:
           # Fichier de configuration spécifique à Staging
           realm-file: realms/test-deploy.json
