@@ -14,8 +14,8 @@ inputs:
     description: "Keycloak username"
     required: true
   keycloak_password:
-        description:" Keycloak password"
-        required: true
+    description: "Keycloak password"
+    required: true
 
 runs:
   using: "composite" 
