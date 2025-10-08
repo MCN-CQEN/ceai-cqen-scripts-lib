@@ -5,8 +5,10 @@ on:
   workflow_dispatch: # Permet de lancer manuellement le déploiement de n'importe quelle branche
 
 env:
+  KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL }}
   KEYCLOAK_USERNAME: ${{ secrets.KEYCLOAK_USERNAME }} # Utilisateur admin commun
   KEYCLOAK_PASSWORD: ${{ secrets.KEYCLOAK_PASSWORD }} # Mot de passe admin commun
+  REAL_FILE: realms/test-deploy.json
 
 jobs:
   deploy-staging:
@@ -17,9 +19,7 @@ jobs:
       - name: Déploiement du Realm test
         uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/keycloak-actions/deploy-realm@main # Chemin vers votre action 
         with:
-          # Fichier de configuration spécifique à Staging
-          realm-file: realms/test-deploy.json
-          # URL spécifique à l'environnement de test
+          realm-file: ${{ env.REALM_FILE }}
           keycloak_url: ${{ secrets.KEYCLOAK_URL }}
           keycloak_username: ${{ env.KEYCLOAK_USERNAME }}
           keycloak_password: ${{ env.KEYCLOAK_PASSWORD }}
