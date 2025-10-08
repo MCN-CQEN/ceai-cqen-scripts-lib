@@ -27,6 +27,19 @@ runs:
       run: sudo apt-get update && sudo apt-get install -y jq curl
       shell: bash
 
+    - name: Debug inputs
+      run: |
+        echo "Valeur reçue pour realm-file : '${{ inputs.realm-file }}'"
+        echo "Chemin absolu : $(pwd)/${{ inputs.realm-file }}"
+        ls -al $(dirname "${{ inputs.realm-file }}") || echo "Répertoire introuvable"
+        if [ -f "${{ inputs.realm-file }}" ]; then
+          echo "✅ Fichier trouvé :"
+          head -n 10 "${{ inputs.realm-file }}"
+        else
+          echo "❌ Fichier introuvable à l’endroit attendu."
+        fi
+      shell: bash
+
     - name: Valider le fichier JSON
       env:
         REALM_FILE: ${{ inputs.realm-file }}
