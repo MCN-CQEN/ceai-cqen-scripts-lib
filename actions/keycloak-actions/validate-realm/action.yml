@@ -57,5 +57,4 @@ runs:
           KC_ADMIN_PASSWORD: ${{ inputs.keycloak_password }}
           KEYCLOAK_API_CLIENT_SECRET: ${{ inputs.keycloak_api_client_secret }}
           TARGET_REALM: ${{ inputs.target_realm}}
-          KEYCLOAK_API_CLIENT_SECRET: ${{inputs.keycloak_api_client_secret}}
       working-directory: .
