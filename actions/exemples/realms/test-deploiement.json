@@ -679,7 +679,7 @@
         "enabled": true,
         "alwaysDisplayInConsole": true,
         "clientAuthenticatorType": "client-secret",
-        "secret": "${{secrets.KEYCLOAK_API_CLIENT_SECRET}}",
+        "secret": "BunSWRTcOaBzgekYw8BQQ2h9Sx7i8jtT",
         "redirectUris": [
           "/*"
         ],
