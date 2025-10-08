@@ -211,16 +211,16 @@ runs:
       id: resolve
       run: |
         REALM_PATH="${{ github.workspace }}/${{ inputs.realm-file }}"
-        echo "🔍 Chemin résolu : $REALM_PATH"
+        echo "Chemin résolu : $REALM_PATH"
 
         if [ ! -f "$REALM_PATH" ]; then
-          echo "❌ Fichier introuvable : $REALM_PATH"
+          echo "Fichier introuvable : $REALM_PATH"
           echo "Contenu du répertoire courant :"
           ls -R "$(dirname "$REALM_PATH")" || true
           exit 1
         fi
 
-        echo "✅ Fichier trouvé : $REALM_PATH"
+        echo "Fichier trouvé : $REALM_PATH"
         echo "REALM_FILE=$REALM_PATH" >> $GITHUB_ENV
       shell: bash
 
@@ -229,7 +229,7 @@ runs:
     # -------------------------------------------------------------
     - name: Debug realm file
       run: |
-        echo "🧩 Vérification de la présence du fichier realm"
+        echo "Vérification de la présence du fichier realm"
         echo "Chemin absolu : $REALM_FILE"
         ls -al "$(dirname "$REALM_FILE")"
         echo "Contenu du fichier :"
@@ -242,17 +242,17 @@ runs:
     - name: Validate realm JSON
       run: |
         if ! jq empty "$REALM_FILE"; then
-          echo "❌ Fichier JSON invalide"
+          echo "Fichier JSON invalide"
           exit 1
         fi
 
         REALM_NAME=$(jq -r '.realm // empty' "$REALM_FILE")
         if [ -z "$REALM_NAME" ]; then
-          echo "❌ Le champ 'realm' est manquant dans le JSON"
+          echo "Le champ 'realm' est manquant dans le JSON"
           exit 1
         fi
 
-        echo "✅ Realm validé : $REALM_NAME"
+        echo "Realm validé : $REALM_NAME"
         echo "REALM_NAME=$REALM_NAME" >> $GITHUB_ENV
       shell: bash
 
@@ -270,12 +270,12 @@ runs:
           -d "grant_type=password" | jq -r .access_token)
 
         if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-          echo "❌ Impossible d'obtenir un token"
+          echo "Impossible d'obtenir un token"
           exit 1
         fi
 
         echo "token=$TOKEN" >> $GITHUB_OUTPUT
-        echo "✅ Token récupéré avec succès"
+        echo "Token récupéré avec succès"
       shell: bash
       env:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
@@ -293,7 +293,7 @@ runs:
           "$KEYCLOAK_URL/admin/realms/$REALM_NAME")
 
         echo "status=$STATUS" >> $GITHUB_OUTPUT
-        echo "📄 Statut du realm : $STATUS"
+        echo "Statut du realm : $STATUS"
       shell: bash
       env:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
@@ -304,7 +304,7 @@ runs:
     - name: Create new realm
       if: steps.check-realm.outputs.status == '404'
       run: |
-        echo "🆕 Création du nouveau realm : $REALM_NAME"
+        echo "Création du nouveau realm : $REALM_NAME"
 
         RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST \
           "$KEYCLOAK_URL/admin/realms" \
@@ -316,9 +316,9 @@ runs:
         BODY=$(echo "$RESPONSE" | sed -e 's/HTTPSTATUS:.*//g')
 
         if [ "$HTTP_CODE" -eq 201 ] || [ "$HTTP_CODE" -eq 204 ]; then
-          echo "✅ Realm créé avec succès"
+          echo "Realm créé avec succès"
         else
-          echo "❌ Échec de la création (HTTP $HTTP_CODE)"
+          echo "Échec de la création (HTTP $HTTP_CODE)"
           echo "$BODY"
           exit 1
         fi
@@ -338,13 +338,13 @@ runs:
         jq 'del(.id, .notBefore, .accessTokenLifespan, .ssoSessionIdleTimeout, .ssoSessionMaxLifespan)' "$REALM_FILE" > new_clean.json
 
         if ! diff -q existing_clean.json new_clean.json >/dev/null 2>&1; then
-          echo "🔄 Différences détectées, mise à jour en cours..."
+          echo "Différences détectées, mise à jour en cours..."
           curl -s -X PUT "$KEYCLOAK_URL/admin/realms/$REALM_NAME" \
               -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
               -H "Content-Type: application/json" \
               --data-binary @"$REALM_FILE"
         else
-          echo "✅ Aucune modification détectée"
+          echo "Aucune modification détectée"
         fi
       shell: bash
       env:
@@ -360,9 +360,9 @@ runs:
           "$KEYCLOAK_URL/admin/realms/$REALM_NAME")
 
         if [ "$STATUS" = "200" ]; then
-          echo "✅ Déploiement vérifié avec succès : Realm '$REALM_NAME'"
+          echo "Déploiement vérifié avec succès : Realm '$REALM_NAME'"
         else
-          echo "❌ Échec de la vérification (HTTP $STATUS)"
+          echo "Échec de la vérification (HTTP $STATUS)"
           exit 1
         fi
       shell: bash
