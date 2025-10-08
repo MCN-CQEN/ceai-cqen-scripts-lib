@@ -1,0 +1,54 @@
+name: "Validation du Realm Keycloak"
+description: "Déploie et teste un Realm Keycloak à partir d’un fichier JSON"
+author: "CEAI-CQEN"
+
+inputs:
+  keycloak_url:
+    description: "URL du serveur Keycloak"
+    required: true
+  keycloak_username:
+    description: "Nom d'utilisateur administrateur Keycloak"
+    required: true
+  keycloak_password:
+    description: "Mot de passe administrateur Keycloak"
+    required: true
+  keycloak_api_client_secret:
+    description: "Secret du client API Keycloak"
+    required: true
+  realm_to_deploy:
+    description: "Chemin vers le fichier du realm à déployer"
+    required: true
+  target_realm:
+    description: "Nom du realm cible"
+    required: false
+    default: "mon-realm-deploiement"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+
+    - name: Installer les dépendances de test
+      shell: bash
+      run: |
+        pip install --upgrade pip
+        pip install pytest requests
+
+    - name: Déploiement du Realm Keycloak
+      uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/keycloak-actions/deploy-realm@feature/deployer_realms
+      with:
+        realm-file: ${{ inputs.realm_to_deploy }}
+        keycloak_url: ${{ inputs.keycloak_url }}
+        keycloak_username: ${{ inputs.keycloak_username }}
+        keycloak_password: ${{ inputs.keycloak_password }}
+
+    - name: Exécuter les tests du Realm Keycloak
+      shell: bash
+      run: pytest test-api/
+      working-directory: .

@@ -1,0 +1,30 @@
+name: Validation quotidienne du Realm Keycloak
+
+on:
+  workflow_dispatch:  
+  pull_request:       
+    branches:
+      - main
+  schedule:
+    - cron: '0 10 * * *'   # Tous les jours à 6h00 (heure du Québec)
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  validate-realm:
+    name: Exécution du composite de validation
+    runs-on: ubuntu-latest
+    environment: test
+
+    steps:
+      - name: Valider et tester le Realm Keycloak
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/keycloak-actions/validate-realm@feature/deployer_realms
+        with:
+          keycloak_url: ${{ secrets.KEYCLOAK_URL_TEST }}
+          keycloak_username: ${{ secrets.KEYCLOAK_ADMIN_USERNAME_TEST }}
+          keycloak_password: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD_TEST }}
+          keycloak_api_client_secret: ${{ secrets.KEYCLOAK_API_CLIENT_SECRET }}
+          realm_to_deploy: realms/test-deploiement.json
+          target_realm: mon-realm-deploiement
