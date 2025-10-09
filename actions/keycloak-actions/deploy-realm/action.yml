@@ -16,6 +16,9 @@ inputs:
   keycloak_password:
     description: "Mot de passe Keycloak (admin)"
     required: true
+  keycloak_api_client_secret:
+    description: "cccccccc"
+    required: true
 
 runs:
   using: "composite"
@@ -110,6 +113,7 @@ runs:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
         KEYCLOAK_USERNAME: ${{ inputs.keycloak_username }}
         KEYCLOAK_PASSWORD: ${{ inputs.keycloak_password }}
+        KEYCLOAK_API_CLIENT_SECRET: ${{ inputs.keycloak_api_client_secret }}
 
     # -------------------------------------------------------------
     # Étape 7 : Vérifie si le realm existe
