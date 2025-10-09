@@ -781,7 +781,7 @@
         "enabled": true,
         "alwaysDisplayInConsole": false,
         "clientAuthenticatorType": "client-secret",
-        "secret": "**********",
+        "secret": "BunSWRTcOaBzgekYw8BQQ2h9Sx7i8jtT",
         "redirectUris": [
           "http://localhost:8080/*"
         ],
