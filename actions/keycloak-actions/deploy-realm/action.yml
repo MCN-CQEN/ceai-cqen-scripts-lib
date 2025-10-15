@@ -17,7 +17,7 @@ inputs:
     description: "Mot de passe Keycloak (admin)"
     required: true
   keycloak_api_client_secret:
-    description: "cccccccc"
+    description: "Secret du client API Keycloak utilisé pour l’authentification lors du déploiement du realm"
     required: true
 
 runs:
