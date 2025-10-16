@@ -40,6 +40,17 @@ runs:
         pip install --upgrade pip
         pip install pytest requests
 
+    - name: Vérifier la présence du secret API Keycloak
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.keycloak_api_client_secret }}" ]; then
+          echo "❌ Erreur : la variable 'keycloak_api_client_secret' est vide ou non transmise."
+          exit 1
+        else
+          echo "✅ Secret Keycloak bien reçu (valeur masquée pour sécurité)."
+          echo "::add-mask::${{ inputs.keycloak_api_client_secret }}"
+        fi
+
     - name: Déploiement du Realm Keycloak
       uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/keycloak-actions/deploy-realm@feature/deployer_realms
       with:
