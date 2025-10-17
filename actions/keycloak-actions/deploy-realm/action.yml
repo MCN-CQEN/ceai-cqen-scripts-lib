@@ -29,9 +29,9 @@ runs:
     # -------------------------------------------------------------
     # Étape 2 : Installation des outils requis
     # -------------------------------------------------------------
-    - name: Install jq and curl
-      run: sudo apt-get update && sudo apt-get install -y jq curl
-      shell: bash
+    # - name: Install jq and curl
+    #   run: sudo apt-get update && sudo apt-get install -y jq curl
+    #   shell: bash
 
     # -------------------------------------------------------------
     # Étape 3 : Résolution du chemin absolu du fichier realm
