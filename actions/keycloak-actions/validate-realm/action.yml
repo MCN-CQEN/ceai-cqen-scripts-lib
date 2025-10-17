@@ -60,6 +60,7 @@ runs:
         keycloak_password: ${{ inputs.keycloak_password }}
 
     - name: Debug repo structure
+      shell: bash
       run: |
         pwd
         ls -R
