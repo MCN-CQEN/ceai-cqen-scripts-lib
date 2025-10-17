@@ -88,24 +88,61 @@ runs:
     # -------------------------------------------------------------
     # Étape 6 : Obtenir un token d'accès admin
     # -------------------------------------------------------------
-    - name: Get access token
-      id: get-token
+
+    - name: Get Keycloak token
+      shell: bash
+      env:
+        KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL }}
+        KEYCLOAK_USERNAME: ${{ secrets.KEYCLOAK_USERNAME }}
+        KEYCLOAK_PASSWORD: ${{ secrets.KEYCLOAK_PASSWORD }}
       run: |
-        TOKEN=$(curl -s -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
+        set -euo pipefail
+    
+        : "${KEYCLOAK_URL:?KEYCLOAK_URL manquant}"
+        : "${KEYCLOAK_USERNAME:?KEYCLOAK_USERNAME manquant}"
+        : "${KEYCLOAK_PASSWORD:?KEYCLOAK_PASSWORD manquant}"
+    
+        RESPONSE=$(curl -sS -X POST \
+          "${KEYCLOAK_URL%/}/realms/master/protocol/openid-connect/token" \
           -H "Content-Type: application/x-www-form-urlencoded" \
           --data-urlencode "client_id=admin-cli" \
           --data-urlencode "username=${KEYCLOAK_USERNAME}" \
           --data-urlencode "password=${KEYCLOAK_PASSWORD}" \
-          --data-urlencode "grant_type=password" | jq -r .access_token)
-
-        if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-          echo "Impossible d'obtenir un token"
+          --data-urlencode "grant_type=password")
+    
+        # Vérifie si la réponse contient un access_token
+        if ! TOKEN=$(echo "$RESPONSE" | jq -r '.access_token // empty'); then
+          echo "Erreur: réponse non JSON"
+          echo "$RESPONSE" | head -c 500
           exit 1
         fi
+    
+        if [[ -z "$TOKEN" ]]; then
+          echo "Aucun access_token trouvé dans la réponse :"
+          echo "$RESPONSE" | head -c 500
+          exit 1
+        fi
+    
+        echo "Token récupéré (longueur=${#TOKEN})."
+        echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+    # - name: Get access token
+    #   id: get-token
+    #   run: |
+    #     TOKEN=$(curl -s -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
+    #       -H "Content-Type: application/x-www-form-urlencoded" \
+    #       --data-urlencode "client_id=admin-cli" \
+    #       --data-urlencode "username=${KEYCLOAK_USERNAME}" \
+    #       --data-urlencode "password=${KEYCLOAK_PASSWORD}" \
+    #       --data-urlencode "grant_type=password" | jq -r .access_token)
 
-        echo "token=$TOKEN" >> $GITHUB_OUTPUT
-        echo "Token récupéré avec succès"
-      shell: bash
+    #     if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+    #       echo "Impossible d'obtenir un token"
+    #       exit 1
+    #     fi
+
+    #     echo "token=$TOKEN" >> $GITHUB_OUTPUT
+    #     echo "Token récupéré avec succès"
+    #   shell: bash
       env:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
         KEYCLOAK_USERNAME: ${{ inputs.keycloak_username }}
