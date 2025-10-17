@@ -62,10 +62,11 @@ runs:
     - name: Exécuter les tests du Realm Keycloak
       shell: bash
       run: pytest test-api/
+      working-directory: ${{ github.workspace }}
       env:
           KEYCLOAK_URL: ${{ inputs.keycloak_url }}
           KC_ADMIN_USER: ${{ inputs.keycloak_username }}
           KC_ADMIN_PASSWORD: ${{ inputs.keycloak_password }}
           KEYCLOAK_API_CLIENT_SECRET: ${{ inputs.keycloak_api_client_secret }}
           TARGET_REALM: ${{ inputs.target_realm}}
-      working-directory: ${{ github.workspace }}
+      
