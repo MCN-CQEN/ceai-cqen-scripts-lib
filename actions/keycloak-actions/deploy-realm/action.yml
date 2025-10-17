@@ -143,11 +143,11 @@ runs:
     #     echo "token=$TOKEN" >> $GITHUB_OUTPUT
     #     echo "Token récupéré avec succès"
     #   shell: bash
-      env:
-        KEYCLOAK_URL: ${{ inputs.keycloak_url }}
-        KEYCLOAK_USERNAME: ${{ inputs.keycloak_username }}
-        KEYCLOAK_PASSWORD: ${{ inputs.keycloak_password }}
-        KEYCLOAK_API_CLIENT_SECRET: ${{ inputs.keycloak_api_client_secret }}
+      # env:
+      #   KEYCLOAK_URL: ${{ inputs.keycloak_url }}
+      #   KEYCLOAK_USERNAME: ${{ inputs.keycloak_username }}
+      #   KEYCLOAK_PASSWORD: ${{ inputs.keycloak_password }}
+      #   KEYCLOAK_API_CLIENT_SECRET: ${{ inputs.keycloak_api_client_secret }}
 
     # -------------------------------------------------------------
     # Étape 7 : Vérifie si le realm existe
