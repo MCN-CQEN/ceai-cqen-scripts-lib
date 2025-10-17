@@ -65,6 +65,11 @@ runs:
         pwd
         ls -R
 
+    - name: Copier les tests du composite
+      shell: bash
+      run: |
+        cp -r ${{ github.action_path }}/test-api ./test-api
+
     - name: Exécuter les tests du Realm Keycloak
       shell: bash
       run: pytest test-api/
