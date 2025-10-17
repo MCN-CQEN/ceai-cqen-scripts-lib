@@ -59,6 +59,11 @@ runs:
         keycloak_username: ${{ inputs.keycloak_username }}
         keycloak_password: ${{ inputs.keycloak_password }}
 
+    - name: Debug structure
+      run: |
+        pwd
+        ls -R
+
     - name: Exécuter les tests du Realm Keycloak
       shell: bash
       run: pytest test-api/
