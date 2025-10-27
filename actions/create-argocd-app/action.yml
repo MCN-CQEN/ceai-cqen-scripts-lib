@@ -1,0 +1,106 @@
+name: "créer une application dans ArgoCD"
+description: "créer une application dans ArgoCD si elle n'existe pas"
+
+inputs:
+  role_to_assume:
+    description: "Nom du rôle AWS"
+    required: true
+  aws_region:
+    description: "Région AWS"
+    required: true
+    default: "ca-central-1"
+  argocd_server:
+    description: "URL du serveur Argo CD"
+    required: true
+  argocd_username:
+    description: "Nom d'utilisateur Argo CD"
+    default: "admin"
+  secret_manager_secret_id:
+    description: "ID du secret dans Secrets Manager"
+    required: true
+  app-name:
+    description: "Le nom de l'application"
+    required: true
+  app_manifest_repo:
+    description: "URL du dépôt Git pour le manifeste de l'application"
+    required: true
+  app_manifest_path:
+    description: "Chemin du manifeste de l'application"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+
+    # Secrets manager pour le mdp de l'admin d'ArgoCD
+
+    - name: "Configure AWS credentials for role ${{ inputs.role_to_assume }}"
+      uses: aws-actions/configure-aws-credentials@v4          
+      with:                
+        role-to-assume: ${{ inputs.role_to_assume }}
+        role-session-name: GitHub_to_AWS_via_FederatedOIDC
+        aws-region: ${{ inputs.aws_region }}
+
+    - name: Obtenir le secret du mdp de l'admin d'ArgoCD dans secretsmanager
+      id: secretsmanager
+      uses: aws-actions/aws-secretmanager-actions/get-secrets@v2
+      with:
+        secret_id: ${{ inputs.secret-manager-secret-id }} #name or ARN of the secret
+
+    # si le secret n'existe pas alors quitter le workflow
+    - name: Verify secret existence
+      shell: bash    
+      run: |
+        if [ -z "${{ env.adminPassword }}" ]; then
+          echo "Error: Secret ${{ inputs.secret-manager-secret-id}} or its key 'adminPassword' not found in AWS Secrets Manager."
+          exit 1
+        else
+          echo "Secret ${{ inputs.secret-manager-secret-id}} exists and is available."
+        fi
+
+
+    # ArgoCD applcation
+
+    - name: Vérifier et installer ArgoCD CLI
+      shell: bash    
+      run: |
+        if ! command -v argocd &> /dev/null
+        then
+            echo "ArgoCD CLI not found, installing..."
+            # Download the latest ArgoCD CLI for Linux AMD64
+            # You can find the latest version from https://github.com/argoproj/argo-cd/releases/latest
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep "tag_name" | cut -d : -f 2,3 | tr -d \" | tr -d , | awk '{print $1}')
+            wget https://github.com/argoproj/argo-cd/releases/download/${LATEST_VERSION}/argocd-linux-amd64
+            sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+            rm argocd-linux-amd64
+            echo "ArgoCD CLI installed."
+        else
+            echo "ArgoCD CLI is already installed."
+        fi
+        argocd version --client # Verify installation
+
+    - name: Login au Argo CD
+      shell: bash
+      run: |  
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password ${{ env.adminPassword }}
+
+    - name: Check si le projet Argo CD existe
+      id: check_project
+      shell: bash
+      run: |
+        if argocd proj get ${{ inputs.app-name }}; then
+          echo "project_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "project_exists=false" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true
+      
+    - name: Create Argo CD project if it doesn't exist
+      shell: bash
+      if: steps.check_project.outputs.project_exists == 'false'        
+      run: argocd app create ${{ inputs.app-name }} \
+          --repo ${{ inputs.app_manifest_repo }} \
+          --path ${{ inputs.app_manifest_path }}}} \
+          --dest-namespace ${{ inputs.app-name }} \
+          --dest-server https://kubernetes.default.svc \
+          --sync-policy automatic 
