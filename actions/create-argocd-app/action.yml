@@ -48,11 +48,13 @@ runs:
       id: secretsmanager
       uses: aws-actions/aws-secretsmanager-get-secrets@v1 
       with:
-        secret_id: ${{ inputs.secret-manager-secret-id }} #name or ARN of the secret
+        secret_ids: ${{ inputs.secret-manager-secret-id }} #name or ARN of the secret     
 
     - name: Verify secret existence
       shell: bash    
       run: |
+        echo "printing env..."
+        env
         if [ -z "${{ env.adminPassword }}" ]; then
           echo "Error: Secret ${{ inputs.secret-manager-secret-id}} or its key 'adminPassword' not found in AWS Secrets Manager."
           exit 1
