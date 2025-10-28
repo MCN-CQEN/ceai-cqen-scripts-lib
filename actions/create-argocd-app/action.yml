@@ -55,7 +55,7 @@ runs:
       run: |
         echo "printing env..."
         env
-        if [ -z "${{ env.adminPassword }}" ]; then
+        if [ -z "${{ env.ADMINPASSWORD }}" ]; then
           echo "Error: Secret ${{ inputs.secret-manager-secret-id}} or its key 'adminPassword' not found in AWS Secrets Manager."
           exit 1
         else
