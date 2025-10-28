@@ -47,7 +47,6 @@ runs:
       with:
         secret_id: ${{ inputs.secret-manager-secret-id }} #name or ARN of the secret
 
-    # si le secret n'existe pas alors quitter le workflow
     - name: Verify secret existence
       shell: bash    
       run: |
@@ -57,7 +56,6 @@ runs:
         else
           echo "Secret ${{ inputs.secret-manager-secret-id}} exists and is available."
         fi
-
 
     # ArgoCD applcation
 
@@ -104,3 +102,7 @@ runs:
           --dest-namespace ${{ inputs.app-name }} \
           --dest-server https://kubernetes.default.svc \
           --sync-policy automatic 
+
+    - name: Assert Argo CD Application Health
+      shell: bash
+      run: argocd app wait ${{ inputs.app-name}} --health --timeout 300s          
