@@ -48,10 +48,11 @@ runs:
       id: secretsmanager
       uses: aws-actions/aws-secretsmanager-get-secrets@v1 
       with:
-        secret-ids: ${{ inputs.secret_manager_secret_id }} #name or ARN of the secret
+        secret-ids: |
+          ,${{ inputs.secret_manager_secret_id }} #name or ARN of the secret
         parse-json-secrets: true # Set to true if your secret value is JSON
 
-    - name: Verify secret existence
+    - name: Verify secret existence ADMINPASSWORD
       shell: bash    
       run: |
         echo "printing env..."
@@ -62,6 +63,18 @@ runs:
         else
           echo "Secret ${{ inputs.secret_manager_secret_id}} exists and is available."
         fi
+
+    - name: Verify secret existence adminPassword
+      shell: bash    
+      run: |
+        echo "printing env..."
+        env
+        if [ -z "${{ env.adminPassword }}" ]; then
+          echo "Error: Secret ${{ inputs.secret_manager_secret_id}} or its key 'adminPassword' not found in AWS Secrets Manager."
+          exit 1
+        else
+          echo "Secret ${{ inputs.secret_manager_secret_id}} exists and is available."
+        fi        
 
     # ArgoCD applcation
 
