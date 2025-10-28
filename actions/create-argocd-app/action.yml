@@ -43,7 +43,7 @@ runs:
 
     - name: Obtenir le secret du mdp de l'admin d'ArgoCD dans secretsmanager
       id: secretsmanager
-      uses: aws-actions/aws-secretmanager-actions/get-secrets@v1
+      uses: aws-actions/aws-secretsmanager-get-secrets@v1 
       with:
         secret_id: ${{ inputs.secret-manager-secret-id }} #name or ARN of the secret
 
