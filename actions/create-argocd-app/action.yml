@@ -49,7 +49,8 @@ runs:
       uses: aws-actions/aws-secretsmanager-get-secrets@v1 
       with:
         secret-ids: |
-          ,${{ inputs.secret_manager_secret_id }} #name or ARN of the secret
+          ,${{ inputs.secret_manager_secret_id }}
+        #name or ARN of the secret
         parse-json-secrets: true # Set to true if your secret value is JSON
 
     - name: print env
