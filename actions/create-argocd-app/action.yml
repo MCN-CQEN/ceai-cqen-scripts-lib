@@ -48,7 +48,8 @@ runs:
       id: secretsmanager
       uses: aws-actions/aws-secretsmanager-get-secrets@v1 
       with:
-        secret_ids: ${{ inputs.secret-manager-secret-id }} #name or ARN of the secret     
+        secret_ids: ${{ inputs.secret-manager-secret-id }} #name or ARN of the secret
+        parse-json-secrets: true # Set to true if your secret value is JSON
 
     - name: Verify secret existence
       shell: bash    
