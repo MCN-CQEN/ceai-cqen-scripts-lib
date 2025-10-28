@@ -34,6 +34,9 @@ runs:
 
     # Secrets manager pour le mdp de l'admin d'ArgoCD
 
+    - name: Checkout code
+      uses: actions/checkout@v3        
+
     - name: "Configure AWS credentials for role ${{ inputs.role_to_assume }}"
       uses: aws-actions/configure-aws-credentials@v4          
       with:                
