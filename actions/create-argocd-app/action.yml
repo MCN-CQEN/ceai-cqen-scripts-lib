@@ -51,7 +51,7 @@ runs:
         secret-ids: |
           ,${{ inputs.secret_manager_secret_id }}
         #name or ARN of the secret
-        parse-json-secrets: true # Set to true if your secret value is JSON
+        #parse-json-secrets: true # Set to true if your secret value is JSON
 
     - name: print env
       shell: bash    
