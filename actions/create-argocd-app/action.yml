@@ -106,7 +106,7 @@ runs:
     - name: Login au Argo CD
       shell: bash
       run: |  
-        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password ${{ env.adminPassword }}
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password ${{ env.ARGOCD_ADM_CREDS_ADMINPASSWORD }}
 
     - name: Check si le projet Argo CD existe
       id: check_project
