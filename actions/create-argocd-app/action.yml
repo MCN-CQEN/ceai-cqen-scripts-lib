@@ -110,7 +110,8 @@ runs:
     - name: Create Argo CD project if it doesn't exist
       shell: bash
       #if: steps.check_project.outputs.project_exists == 'false'        
-      if: steps.check_project.outputs.exit_code == '1' #project doesn't exist
+      #if: steps.check_project.outputs.exit_code == '0' #project doesn't exist
+      if: failure() # previous step failed
       run: argocd app create ${{ inputs.app-name }} \
           --repo ${{ inputs.app_manifest_repo }} \
           --revision ${{ inputs.app_manifest_repo_branch }}
