@@ -123,7 +123,7 @@ runs:
 
     - name: Assert Argo CD Application Health
       shell: bash
-      run: echo "final step, value of exit_code ${{ exit_code }} project ${{ inputs.app-name }} should have been created"  
+      run: echo "final step, value of exit_code ${{ steps.check_project.outputs.exit_code }} project ${{ inputs.app-name }} should have been created"  
 
     # - name: Assert Argo CD Application Health
     #   shell: bash
