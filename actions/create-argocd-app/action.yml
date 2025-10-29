@@ -24,6 +24,9 @@ inputs:
   app_manifest_repo:
     description: "URL du dépôt Git pour le manifeste de l'application"
     required: true
+  app_manifest_repo_branch:
+    description: "Récupérer la branche du dépôt Git pour le manifeste de l'application"
+    default: "main"
   app_manifest_path:
     description: "Chemin du manifeste de l'application"
     required: true
@@ -124,6 +127,7 @@ runs:
       if: steps.check_project.outputs.project_exists == 'false'        
       run: argocd app create ${{ inputs.app-name }} \
           --repo ${{ inputs.app_manifest_repo }} \
+          --revision ${{ inputs.app_manifest_repo_branch }}
           --path ${{ inputs.app_manifest_path }}}} \
           --dest-namespace ${{ inputs.app-name }} \
           --dest-server https://kubernetes.default.svc \
