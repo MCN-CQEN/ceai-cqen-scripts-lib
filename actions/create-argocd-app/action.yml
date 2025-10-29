@@ -115,11 +115,15 @@ runs:
           echo "project does not exist. Will be created."        
           argocd app create ${{ inputs.app-name }} \
           --repo ${{ inputs.app_manifest_repo }} \
-          --revision ${{ inputs.app_manifest_repo_branch }}
-          --path ${{ inputs.app_manifest_path }}}} \
+          --revision ${{ inputs.app_manifest_repo_branch }} \
+          --path ${{ inputs.app_manifest_path }} \
           --dest-namespace ${{ inputs.app-name }} \
           --dest-server https://kubernetes.default.svc \
-          --sync-policy automatic 
+          --directory-recurse \
+          --upsert \
+          --grpc-web
+          # --sync-policy automatic 
+
 
     - name: Assert Argo CD Application Health
       shell: bash
