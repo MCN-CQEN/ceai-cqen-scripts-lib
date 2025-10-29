@@ -49,27 +49,27 @@ runs:
       uses: aws-actions/aws-secretsmanager-get-secrets@v1 
       with:
         secret-ids: |
-          ARGOCD_ADMIN_PASSWORD,${{ inputs.secret_manager_secret_id }}
+          ARGOCD_ADM_CREDS,${{ inputs.secret_manager_secret_id }}
         #name or ARN of the secret
         parse-json-secrets: true # Set to true if your secret value is JSON
 
-    - name: print env
-      shell: bash    
-      run: |
-        echo "printing env..."
-        env
-
-    # - name: Verify secret existence ADMINPASSWORD
+    # - name: print env
     #   shell: bash    
     #   run: |
     #     echo "printing env..."
     #     env
-    #     if [ -z "${{ env.ADMINPASSWORD }}" ]; then
-    #       echo "Error: Secret ${{ inputs.secret_manager_secret_id}} or its key 'ADMINPASSWORD' not found in AWS Secrets Manager."
-    #       exit 1
-    #     else
-    #       echo "Secret ${{ inputs.secret_manager_secret_id}} exists and is available."
-    #     fi
+
+    - name: Verify secret existence ADMINPASSWORD
+      shell: bash    
+      run: |
+        echo "printing env..."
+        env
+        if [ -z "${{ env.ARGOCD_ADM_CREDS_ADMINPASSWORD }}" ]; then
+          echo "Error: Secret ${{ inputs.secret_manager_secret_id}} or its key 'ADMINPASSWORD' not found in AWS Secrets Manager."
+          exit 1
+        else
+          echo "Secret ${{ inputs.secret_manager_secret_id}} exists and is available."
+        fi
 
     # - name: Verify secret existence adminPassword
     #   shell: bash    
@@ -85,50 +85,50 @@ runs:
 
     # ArgoCD applcation
 
-    # - name: Vérifier et installer ArgoCD CLI
-    #   shell: bash    
-    #   run: |
-    #     if ! command -v argocd &> /dev/null
-    #     then
-    #         echo "ArgoCD CLI not found, installing..."
-    #         # Download the latest ArgoCD CLI for Linux AMD64
-    #         # You can find the latest version from https://github.com/argoproj/argo-cd/releases/latest
-    #         LATEST_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep "tag_name" | cut -d : -f 2,3 | tr -d \" | tr -d , | awk '{print $1}')
-    #         wget https://github.com/argoproj/argo-cd/releases/download/${LATEST_VERSION}/argocd-linux-amd64
-    #         sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
-    #         rm argocd-linux-amd64
-    #         echo "ArgoCD CLI installed."
-    #     else
-    #         echo "ArgoCD CLI is already installed."
-    #     fi
-    #     argocd version --client # Verify installation
+    - name: Vérifier et installer ArgoCD CLI
+      shell: bash    
+      run: |
+        if ! command -v argocd &> /dev/null
+        then
+            echo "ArgoCD CLI not found, installing..."
+            # Download the latest ArgoCD CLI for Linux AMD64
+            # You can find the latest version from https://github.com/argoproj/argo-cd/releases/latest
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep "tag_name" | cut -d : -f 2,3 | tr -d \" | tr -d , | awk '{print $1}')
+            wget https://github.com/argoproj/argo-cd/releases/download/${LATEST_VERSION}/argocd-linux-amd64
+            sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+            rm argocd-linux-amd64
+            echo "ArgoCD CLI installed."
+        else
+            echo "ArgoCD CLI is already installed."
+        fi
+        argocd version --client # Verify installation
 
-    # - name: Login au Argo CD
-    #   shell: bash
-    #   run: |  
-    #     argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password ${{ env.adminPassword }}
+    - name: Login au Argo CD
+      shell: bash
+      run: |  
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password ${{ env.adminPassword }}
 
-    # - name: Check si le projet Argo CD existe
-    #   id: check_project
-    #   shell: bash
-    #   run: |
-    #     if argocd proj get ${{ inputs.app-name }}; then
-    #       echo "project_exists=true" >> $GITHUB_OUTPUT
-    #     else
-    #       echo "project_exists=false" >> $GITHUB_OUTPUT
-    #     fi
-    #   continue-on-error: true
+    - name: Check si le projet Argo CD existe
+      id: check_project
+      shell: bash
+      run: |
+        if argocd proj get ${{ inputs.app-name }}; then
+          echo "project_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "project_exists=false" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true
       
-    # - name: Create Argo CD project if it doesn't exist
-    #   shell: bash
-    #   if: steps.check_project.outputs.project_exists == 'false'        
-    #   run: argocd app create ${{ inputs.app-name }} \
-    #       --repo ${{ inputs.app_manifest_repo }} \
-    #       --path ${{ inputs.app_manifest_path }}}} \
-    #       --dest-namespace ${{ inputs.app-name }} \
-    #       --dest-server https://kubernetes.default.svc \
-    #       --sync-policy automatic 
+    - name: Create Argo CD project if it doesn't exist
+      shell: bash
+      if: steps.check_project.outputs.project_exists == 'false'        
+      run: argocd app create ${{ inputs.app-name }} \
+          --repo ${{ inputs.app_manifest_repo }} \
+          --path ${{ inputs.app_manifest_path }}}} \
+          --dest-namespace ${{ inputs.app-name }} \
+          --dest-server https://kubernetes.default.svc \
+          --sync-policy automatic 
 
-    # - name: Assert Argo CD Application Health
-    #   shell: bash
-    #   run: argocd app wait ${{ inputs.app-name}} --health --timeout 300s          
+    - name: Assert Argo CD Application Health
+      shell: bash
+      run: argocd app wait ${{ inputs.app-name}} --health --timeout 300s          
