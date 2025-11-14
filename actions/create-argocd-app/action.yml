@@ -18,12 +18,14 @@ inputs:
   secret_manager_secret_id:
     description: "ID du secret dans Secrets Manager"
     required: true
-  app-name:
+  app_project_name:
+    description: "Le nom du projet où l'application sera déployée"
+  app_name:
     description: "Le nom de l'application"
     required: true
-  app_dest_amespace: 
+  app_dest_namespace: 
     description: "Espace de destination du projet Argo CD"
-    required: true
+    default: "argocd"
   app_manifest_repo:
     description: "URL du dépôt Git pour le manifeste de l'application"
     required: true
@@ -69,8 +71,6 @@ runs:
           echo "Secret ${{ inputs.secret_manager_secret_id}} exists and is available."
         fi    
 
-    # ArgoCD applcation
-
     - name: Vérifier et installer ArgoCD CLI
       shell: bash    
       run: |
@@ -99,39 +99,70 @@ runs:
       continue-on-error: true # This ensures the step won't fail the workflow if the command errors
       shell: bash
       run: |
-        # if argocd proj get ${{ inputs.app-name }}; then
-        #   echo "project_exists=true" >> $GITHUB_OUTPUT
-        # else
-        #   echo "project_exists=false" >> $GITHUB_OUTPUT
-        # fi
+        if argocd proj get ${{ inputs.app_project_name }}; then
+          echo "project_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "project_exists=false" >> $GITHUB_OUTPUT
+        fi
         # Attempt to get the project and capture the exit code
-        argocd proj get ${{ inputs.app-name }} &> /dev/null
-        echo "exit_code=$?" >> $GITHUB_OUTPUT        
-      
-    - name: Create Argo CD project if it doesn't exist
+        # argocd proj get ${{ inputs.app_name }} &> /dev/null
+        # echo "exit_code=$?" >> $GITHUB_OUTPUT    
+    
+    - name: Quitter si le projet n'existe pas
       shell: bash
-      #if: steps.check_project.outputs.project_exists == 'false'        
-      #if: steps.check_project.outputs.exit_code != '0' #project doesn't exist
-      #if: failure() # previous step failed
-      #if: ${{ failure() }} # This step runs only if previous step failed
       run: |
-          echo "project does not exist. Will be created."        
-          argocd app create ${{ inputs.app-name }} \
-          --repo ${{ inputs.app_manifest_repo }} \
-          --revision ${{ inputs.app_manifest_repo_branch }} \
-          --path ${{ inputs.app_manifest_path }} \
-          --dest-namespace ${{ inputs.app_dest_amespace }} \
-          --dest-server https://kubernetes.default.svc \
-          --directory-recurse \
-          --upsert \
-          --grpc-web
-          # --sync-policy automatic 
+        if ! project_exists; then
+          echo "Projet ${inputs.app_project_name} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
+          exit 0
+
+    - name: Check if Argo CD application exists and create if not
+      shell: bash
+      env:
+        APP_NAME: my-app # Replace with your application name
+        REPO_URL: https://github.com/your-org/your-repo.git # Replace with your Git repository URL
+        PATH_IN_REPO: k8s/my-app # Replace with the path to your application manifests in the repo
+        DEST_NAMESPACE: default # Replace with your target namespace
+        DEST_SERVER: https://kubernetes.default.svc # Replace with your target cluster API server
+      run: |
+        if ! argocd app get ${inputs.app_name} &> /dev/null; then
+          echo "Argo CD application '${inputs.app_name}' does not exist. Creating it..."
+          argocd app create $APP_NAME \
+            --repo ${inputs.app_manifest_repo} \
+            --path ${inputs.app_manifest_path} \
+            --dest-namespace ${inputs.app_dest_namespace} \
+            --dest-server https://kubernetes.default.svc \
+            --sync-policy automated # Or your desired sync policy \
+            --grpc-web
+        else
+          echo "Argo CD application '${inputs.app_name}' already exists. Skipping creation."
+        fi        
+
+    
+      
+    # - name: Create Argo CD app if it doesn't exist
+    #   shell: bash
+    #   #if: steps.check_project.outputs.project_exists == 'false'        
+    #   #if: steps.check_project.outputs.exit_code != '0' #project doesn't exist
+    #   #if: failure() # previous step failed
+    #   #if: ${{ failure() }} # This step runs only if previous step failed
+    #   run: |
+    #       echo "project does not exist. Will be created."        
+    #       argocd app create ${{ inputs.app_name }} \
+    #       --repo ${{ inputs.app_manifest_repo }} \
+    #       --revision ${{ inputs.app_manifest_repo_branch }} \
+    #       --path ${{ inputs.app_manifest_path }} \
+    #       --dest-namespace ${{ inputs.app_dest_namespace }} \
+    #       --dest-server https://kubernetes.default.svc \
+    #       --directory-recurse \
+    #       --upsert \
+    #       --grpc-web
+    #       # --sync-policy automatic 
 
 
     - name: Assert Argo CD Application Health
       shell: bash
-      run: echo "final step, value of exit_code ${{ steps.check_project.outputs.exit_code }} project ${{ inputs.app-name }} should have been created"  
+      run: echo "final step, application ${{ inputs.app_name }} should have been created"  
 
     # - name: Assert Argo CD Application Health
     #   shell: bash
-    #   run: argocd app wait ${{ inputs.app-name}} --health --timeout 300        
+    #   run: argocd app wait ${{ inputs.app_name}} --health --timeout 300        
