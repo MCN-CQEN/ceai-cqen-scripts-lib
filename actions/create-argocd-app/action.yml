@@ -15,9 +15,12 @@ inputs:
   argocd_username:
     description: "Nom d'utilisateur Argo CD"
     default: "admin"
-  secret_manager_secret_id:
-    description: "ID du secret dans Secrets Manager"
+  sm_argocd_admin_creds_secret_name:
+    description: "Nom du secret dans Secrets Manager"
     required: true
+  sm_argocd_admin_creds_secret_key:
+    description: "Nom du secret dans Secrets Manager"
+    required: true    
   app_project_name:
     description: "Le nom du projet où l'application sera déployée"
   app_name:
@@ -57,18 +60,19 @@ runs:
       uses: aws-actions/aws-secretsmanager-get-secrets@v1 
       with:
         secret-ids: |
-          ARGOCD_ADM_CREDS,${{ inputs.secret_manager_secret_id }}
+          ARGOCD_ADM_CREDS,${{ inputs.sm_argocd_admin_creds_secret_name }}
         #name or ARN of the secret
         parse-json-secrets: true # Set to true if your secret value is JSON
 
-    - name: Verify secret existence ADMINPASSWORD
+    - name: Verify secret existence ${{ inputs.sm_argocd_admin_creds_secret_key}}
       shell: bash    
       run: |
-        if [ -z "${{ env.ARGOCD_ADM_CREDS_ADMINPASSWORD }}" ]; then
-          echo "Error: Secret ${{ inputs.secret_manager_secret_id}} or its key 'ADMINPASSWORD' not found in AWS Secrets Manager."
+        SECRET_CONCATENATED="ARGOCD_ADM_CREDS_${ inputs.sm_argocd_admin_creds_secret_key^^ }"
+        if [ -z "${{ env.SECRET_CONCATENATED }}" ]; then
+          echo "Error: Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} or its key ${{ inputs.sm_argocd_admin_creds_secret_key }} not found in AWS Secrets Manager."
           exit 1
         else
-          echo "Secret ${{ inputs.secret_manager_secret_id}} exists and is available."
+          echo "Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} exists and is available."
         fi    
 
     - name: Vérifier et installer ArgoCD CLI
