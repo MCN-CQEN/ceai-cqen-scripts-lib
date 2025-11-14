@@ -68,9 +68,13 @@ runs:
       shell: bash    
       run: |
         SECRET_CONCATENATED="ARGOCD_ADM_CREDS_${{ inputs.sm_argocd_admin_creds_secret_key }}"
-        echo "SECRET_CONCATENATED:  " ${{env.SECRET_CONCATENATED}}
-        if [ -z "${{ env.SECRET_CONCATENATED }}" ]; then
+        echo "SECRET_CONCATENATED:  " $SECRET_CONCATENATED
+        if [ -z "${{ env.ARGOCD_ADM_CREDS }}" ]; then
           echo "Error: Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} or its key ${{ inputs.sm_argocd_admin_creds_secret_key }} not found in AWS Secrets Manager."
+           if [ -z $SECRET_CONCATENATED ]; then
+              echo "$SECRET_CONCATENATED also empty!!! " 
+
+           fi
           exit 1
         else
           echo "Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} exists and is available."
