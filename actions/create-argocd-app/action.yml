@@ -118,8 +118,11 @@ runs:
       shell: bash
       run: |
         if ! project_exists; then
-          echo "Projet ${inputs.app_project_name} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
+          echo "Projet ${{inputs.app_project_name}} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
           exit 0
+        else
+          echo "Project ${{inputs.app_project_name}} exists, will continue"
+        fi
 
     - name: Check if Argo CD application exists and create if not
       shell: bash
