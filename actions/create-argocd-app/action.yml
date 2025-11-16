@@ -100,7 +100,7 @@ runs:
     - name: Login au Argo CD
       shell: bash
       run: |  
-        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "$SECRET_CONCATENATED_NAME" --grpc-web --insecure
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "$SECRET_VALUE" --grpc-web --insecure
 
     - name: Check si le projet Argo CD existe
       id: check_project
