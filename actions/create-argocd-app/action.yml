@@ -69,6 +69,8 @@ runs:
       run: |
         SECRET_CONCATENATED="ARGOCD_ADM_CREDS_${{ inputs.sm_argocd_admin_creds_secret_key }}"
         echo "SECRET_CONCATENATED:  " $SECRET_CONCATENATED
+        SECRET_VALUE=${!SECRET_CONCATENATED}
+        echo "The value of ${SECRET_CONCATENATED} is: ${SECRET_VALUE}"
         if [ -n "$SECRET_CONCATENATED" ]; then
           echo "$SECRET_CONCATENATED exists and its value is: $SECRET_CONCATENATED"
         else
