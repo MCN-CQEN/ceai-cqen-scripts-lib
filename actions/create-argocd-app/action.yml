@@ -71,10 +71,10 @@ runs:
         echo "SECRET_CONCATENATED:  " $SECRET_CONCATENATED
         if [ -n "$SECRET_CONCATENATED" ]; then
           echo "$SECRET_CONCATENATED exists and its value is: $SECRET_CONCATENATED"
-          #echo "Error: Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} or its key ${{ inputs.sm_argocd_admin_creds_secret_key }} not found in AWS Secrets Manager."
-          #exit 1
         else
-          echo "Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} exists and is available."
+          #echo "Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} exists and is available."
+          echo "Error: Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} or its key ${{ inputs.sm_argocd_admin_creds_secret_key }} not found in AWS Secrets Manager."
+          exit 1          
         fi    
 
     - name: Vérifier et installer ArgoCD CLI
@@ -98,7 +98,7 @@ runs:
     - name: Login au Argo CD
       shell: bash
       run: |  
-        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password ${{ env.ARGOCD_ADM_CREDS_ADMINPASSWORD }} --grpc-web --insecure
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password $SECRET_CONCATENATED --grpc-web --insecure
 
     - name: Check si le projet Argo CD existe
       id: check_project
@@ -117,7 +117,7 @@ runs:
     - name: Quitter si le projet n'existe pas
       shell: bash
       run: |
-        if ! project_exists; then
+        if ! steps.check_project.outputs.project_exists; then
           echo "Projet ${{inputs.app_project_name}} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
           exit 0
         else
@@ -133,7 +133,7 @@ runs:
         DEST_NAMESPACE: default # Replace with your target namespace
         DEST_SERVER: https://kubernetes.default.svc # Replace with your target cluster API server
       run: |
-        if ! argocd app get ${inputs.app_name} &> /dev/null; then
+        if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
           echo "Argo CD application '${inputs.app_name}' does not exist. Creating it..."
           argocd app create $APP_NAME \
             --repo ${inputs.app_manifest_repo} \
@@ -143,7 +143,7 @@ runs:
             --sync-policy automated # Or your desired sync policy \
             --grpc-web
         else
-          echo "Argo CD application '${inputs.app_name}' already exists. Skipping creation."
+          echo "Argo CD application '${{inputs.app_name}}' already exists. Skipping creation."
         fi        
 
     
