@@ -67,12 +67,12 @@ runs:
     - name: Verify secret existence ${{ inputs.sm_argocd_admin_creds_secret_key}}
       shell: bash    
       run: |
-        SECRET_CONCATENATED="ARGOCD_ADM_CREDS_${{ inputs.sm_argocd_admin_creds_secret_key }}"
-        echo "SECRET_CONCATENATED:  " $SECRET_CONCATENATED
-        SECRET_VALUE=${!SECRET_CONCATENATED}
-        echo "The value of ${SECRET_CONCATENATED} is: ${SECRET_VALUE}"
-        if [ -n "$SECRET_CONCATENATED" ]; then
-          echo "$SECRET_CONCATENATED exists and its value is: $SECRET_CONCATENATED"
+        SECRET_CONCATENATED_NAME="ARGOCD_ADM_CREDS_${{ inputs.sm_argocd_admin_creds_secret_key }}"
+        echo "SECRET_CONCATENATED_NAME:  " $SECRET_CONCATENATED_NAME
+        SECRET_VALUE=${!SECRET_CONCATENATED_NAME}
+        echo "The value of ${SECRET_CONCATENATED_NAME} is: ${SECRET_VALUE}"
+        if [ -n "$SECRET_VALUE" ]; then
+          echo "$SECRET_CONCATENATED_NAME exists and its value is: $SECRET_VALUE"
         else
           #echo "Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} exists and is available."
           echo "Error: Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} or its key ${{ inputs.sm_argocd_admin_creds_secret_key }} not found in AWS Secrets Manager."
@@ -100,7 +100,7 @@ runs:
     - name: Login au Argo CD
       shell: bash
       run: |  
-        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "$SECRET_CONCATENATED" --grpc-web --insecure
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "$SECRET_CONCATENATED_NAME" --grpc-web --insecure
 
     - name: Check si le projet Argo CD existe
       id: check_project
