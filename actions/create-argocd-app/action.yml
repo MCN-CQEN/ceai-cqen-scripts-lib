@@ -69,12 +69,12 @@ runs:
       run: |
         SECRET_CONCATENATED_NAME="ARGOCD_ADM_CREDS_${{ inputs.sm_argocd_admin_creds_secret_key }}"
         echo "SECRET_CONCATENATED_NAME:  " $SECRET_CONCATENATED_NAME
-        SECRET_VALUE=${!SECRET_CONCATENATED_NAME} >> $GITHUB_ENV
+        SECRET_VALUE=${!SECRET_CONCATENATED_NAME}
 
         # Set it as an environment variable for subsequent steps
-        #echo "SECRET_VALUE=${SECRET_VALUE}" >> $GITHUB_ENV
+        echo "ADM_PWD=${SECRET_VALUE}" >> $GITHUB_ENV
         
-        echo "The value of ${SECRET_CONCATENATED_NAME} is: ${SECRET_VALUE}"
+        echo "The value of ${SECRET_CONCATENATED_NAME} is: ${SECRET_VALUE}, from env: ${{ env.ADM_PWD }}"
         if [ -n "$SECRET_VALUE" ]; then
           echo "$SECRET_CONCATENATED_NAME exists and its value is: $SECRET_VALUE"
         else
@@ -104,7 +104,7 @@ runs:
     - name: Login au Argo CD
       shell: bash
       run: |  
-        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "${{ env.SECRET_VALUE }}" --grpc-web --insecure
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "${{ env.ADM_PWD }}" --grpc-web --insecure
 
     - name: Check si le projet Argo CD existe
       id: check_project
