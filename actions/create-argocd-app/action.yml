@@ -69,9 +69,12 @@ runs:
       run: |
         SECRET_CONCATENATED_NAME="ARGOCD_ADM_CREDS_${{ inputs.sm_argocd_admin_creds_secret_key }}"
         echo "SECRET_CONCATENATED_NAME:  " $SECRET_CONCATENATED_NAME
+        SECRET_VALUE=${!SECRET_CONCATENATED_NAME} >> $GITHUB_ENV
+
         # Set it as an environment variable for subsequent steps
-        echo "SECRET_VALUE=${!SECRET_CONCATENATED_NAME}" >> $GITHUB_ENV
-        echo "The value of ${SECRET_CONCATENATED_NAME} is: $SECRET_VALUE"
+        #echo "SECRET_VALUE=${SECRET_VALUE}" >> $GITHUB_ENV
+        
+        echo "The value of ${SECRET_CONCATENATED_NAME} is: ${SECRET_VALUE}"
         if [ -n "$SECRET_VALUE" ]; then
           echo "$SECRET_CONCATENATED_NAME exists and its value is: $SECRET_VALUE"
         else
