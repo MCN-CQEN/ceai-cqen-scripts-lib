@@ -123,7 +123,7 @@ runs:
     - name: Quitter si le projet n'existe pas
       shell: bash
       run: |
-        if ! steps.check_project.outputs.project_exists; then
+        if ${{steps.check_project.outputs.project_exists == 'false'}}; then
           echo "Projet ${{inputs.app_project_name}} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
           exit 0
         else
