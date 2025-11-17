@@ -149,7 +149,7 @@ runs:
             --dest-server https://kubernetes.default.svc \
             --project ${{ inputs.app_project_name }} \
             --sync-policy automated # Or your desired sync policy \            
-            --grpc-web
+            --grpc-web 
         else
           echo "Argo CD application '${{inputs.app_name}}' already exists. Skipping creation."
         fi        
