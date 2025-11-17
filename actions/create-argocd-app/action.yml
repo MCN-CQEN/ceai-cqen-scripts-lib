@@ -143,6 +143,7 @@ runs:
           echo "Argo CD application '${{inputs.app_name}}' does not exist. Creating it..."
           argocd app create ${{inputs.app_name}} \
             --repo ${{inputs.app_manifest_repo}} \
+            --revision ${{ inputs.app_manifest_repo_branch }} \
             --path ${{inputs.app_manifest_path}} \
             --dest-namespace ${{inputs.app_dest_namespace}} \
             --dest-server https://kubernetes.default.svc \
