@@ -132,19 +132,19 @@ runs:
 
     - name: Check if Argo CD application exists and create if not
       shell: bash
-      env:
-        APP_NAME: my-app # Replace with your application name
-        REPO_URL: https://github.com/your-org/your-repo.git # Replace with your Git repository URL
-        PATH_IN_REPO: k8s/my-app # Replace with the path to your application manifests in the repo
-        DEST_NAMESPACE: default # Replace with your target namespace
-        DEST_SERVER: https://kubernetes.default.svc # Replace with your target cluster API server
+      # env:
+      #   APP_NAME: my-app # Replace with your application name
+      #   REPO_URL: https://github.com/your-org/your-repo.git # Replace with your Git repository URL
+      #   PATH_IN_REPO: k8s/my-app # Replace with the path to your application manifests in the repo
+      #   DEST_NAMESPACE: default # Replace with your target namespace
+      #   DEST_SERVER: https://kubernetes.default.svc # Replace with your target cluster API server
       run: |
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
-          echo "Argo CD application '${inputs.app_name}' does not exist. Creating it..."
-          argocd app create $APP_NAME \
-            --repo ${inputs.app_manifest_repo} \
-            --path ${inputs.app_manifest_path} \
-            --dest-namespace ${inputs.app_dest_namespace} \
+          echo "Argo CD application '${{inputs.app_name}}' does not exist. Creating it..."
+          argocd app create ${{inputs.app_name}} \
+            --repo ${{inputs.app_manifest_repo}} \
+            --path ${{inputs.app_manifest_path}} \
+            --dest-namespace ${{inputs.app_dest_namespace}} \
             --dest-server https://kubernetes.default.svc \
             --sync-policy automated # Or your desired sync policy \
             --grpc-web
