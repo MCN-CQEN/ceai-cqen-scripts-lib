@@ -133,6 +133,10 @@ runs:
           echo "Project ${{inputs.app_project_name}} exists, will continue"
         fi
 
+    - name: List files for debugging
+      shell: bash
+      run: ls -R ${{ github.workspace }}
+
     - name: Check if Argo CD application exists and create if not
       shell: bash
       # env:
@@ -147,9 +151,6 @@ runs:
           pwd
           ls -la
           cat ${{ inputs.app_helm_values_file}}
-          echo "printing pwd and ls -la...."
-          pwd
-          ls -la
           echo "Argo CD application '${{inputs.app_name}}' does not exist. Creating it..."
           argocd app create ${{inputs.app_name}} \
             --repo ${{inputs.app_manifest_repo}} \
@@ -158,7 +159,7 @@ runs:
             --dest-namespace ${{inputs.app_dest_namespace}} \
             --dest-server https://kubernetes.default.svc \
             --project ${{ inputs.app_project_name }} \
-            --values ../../${{ inputs.app_helm_values_file }} \
+            --values ${{ github.workspace }}/${{ inputs.app_helm_values_file }} \
             --sync-policy automated # Or your desired sync policy \            
             --grpc-web 
         else
