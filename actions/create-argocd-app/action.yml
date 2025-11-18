@@ -39,7 +39,7 @@ inputs:
     description: "Chemin du manifeste de l'application"
     required: true
   app_helm_values_file:
-    description: "Le contenu du fichier de configuration additional des variables d'environnement de l'application."
+    description: "Le fichier de configuration additionnel des variables d'environnement de l'application."
 
 
 runs:
@@ -143,8 +143,11 @@ runs:
       #   DEST_SERVER: https://kubernetes.default.svc # Replace with your target cluster API server
       run: |
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
+          echo "print content of received file..."
           echo "${{ inputs.app_helm_values_file }}" > helm_values.yml
           cat helm_values.yml
+          echo "print of received file..."
+          cat ${{ inputs.app_helm_values_file}}
           echo "Argo CD application '${{inputs.app_name}}' does not exist. Creating it..."
           argocd app create ${{inputs.app_name}} \
             --repo ${{inputs.app_manifest_repo}} \
@@ -153,7 +156,7 @@ runs:
             --dest-namespace ${{inputs.app_dest_namespace}} \
             --dest-server https://kubernetes.default.svc \
             --project ${{ inputs.app_project_name }} \
-            --values helm_values.yml \
+            --values ${{ inputs.app_helm_values_file }} \
             --sync-policy automated # Or your desired sync policy \            
             --grpc-web 
         else
