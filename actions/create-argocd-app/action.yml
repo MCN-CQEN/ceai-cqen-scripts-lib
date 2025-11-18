@@ -151,7 +151,7 @@ runs:
             --dest-namespace ${{inputs.app_dest_namespace}} \
             --dest-server https://kubernetes.default.svc \
             --project ${{ inputs.app_project_name }} \
-            --helm-values-file ${{ inputs.app_helm_values_file }} \
+            --values ${{ inputs.app_helm_values_file }} \
             --sync-policy automated # Or your desired sync policy \            
             --grpc-web 
         else
