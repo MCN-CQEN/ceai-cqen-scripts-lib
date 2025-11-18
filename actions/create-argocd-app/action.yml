@@ -143,10 +143,9 @@ runs:
       #   DEST_SERVER: https://kubernetes.default.svc # Replace with your target cluster API server
       run: |
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
-          echo "print content of received file..."
-          echo "${{ inputs.app_helm_values_file }}" > helm_values.yml
-          cat helm_values.yml
-          echo "print of received file..."
+          echo "print of received file... ${{inputs.app_helm_values_file}}"
+          pwd
+          ls -la
           cat ${{ inputs.app_helm_values_file}}
           echo "printing pwd and ls -la...."
           pwd
