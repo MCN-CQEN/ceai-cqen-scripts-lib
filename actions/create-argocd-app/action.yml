@@ -144,13 +144,14 @@ runs:
 
     - name: Check if Argo CD application exists and create if not
       shell: bash
+      env:
+        HELM_PARAMS_EXIST: false
       run: |
-        helm_params_received = false
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
           if ${{inputs.helm_params}}:  # This condition is True if helm_params is not empty
             print("La liste de parametres helm n'est pas vide. On met les valeurs dans un array")
             IFS=',' read -ra PARAMS <<< "${{ inputs.helm_params }}"
-            helm_params_received = true
+            $HELM_PARAMS_EXIST = true
           fi        
 
           # Initializer la commande de création de l'application
@@ -166,7 +167,7 @@ runs:
             --grpc-web"
 
           # S'il y a des parametres additionnels, on les ajoute
-          if helm_params_received then
+          if $HELM_PARAMS_EXIST then
             for param in "${PARAMS[@]}"; do
               # Trim leading/trailing whitespace and append the flag
               CMD="$CMD --helm-set $(echo "$param" | xargs)"
