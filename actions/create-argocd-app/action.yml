@@ -14,7 +14,7 @@ inputs:
     required: true
   argocd_version:
     description: "La version d'argocd"
-    default: "2.10.20" # current version of argocd for the lab (202511)
+    default: "v2.10.20" # current version of argocd for the lab (202511)
   argocd_username:
     description: "Nom d'utilisateur Argo CD"
     default: "admin"
