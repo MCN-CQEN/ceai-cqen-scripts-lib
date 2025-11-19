@@ -149,7 +149,7 @@ runs:
       run: |
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
           if ${{inputs.helm_params}}:  # This condition is True if helm_params is not empty
-            print("La liste de parametres helm n'est pas vide. On met les valeurs dans un array")
+            print("Liste de parametres helm non vide. On met les valeurs dans un array")
             IFS=',' read -ra PARAMS <<< "${{ inputs.helm_params }}"
             $HELM_PARAMS_EXIST = true
           fi        
