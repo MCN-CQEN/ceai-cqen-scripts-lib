@@ -41,9 +41,11 @@ inputs:
   app_manifest_path:
     description: "Chemin du manifeste de l'application"
     required: true
-  app_helm_values_file:
-    description: "Le fichier de configuration additionnel des variables d'environnement de l'application."
-
+  # app_helm_values_file:
+  #   description: "Le fichier de configuration additionnel des variables d'environnement de l'application."
+  helm_params:
+    description: 'La liste de parametres helm avec le format "key1=val1,key2=val2"'
+    default: ''
 
 runs:
   using: "composite"
@@ -136,37 +138,45 @@ runs:
           echo "Project ${{inputs.app_project_name}} exists, will continue"
         fi
 
-    - name: List files for debugging
-      shell: bash
-      run: ls -R ${{ github.workspace }}
+    # - name: List files for debugging
+    #   shell: bash
+    #   run: ls -R ${{ github.workspace }}
 
     - name: Check if Argo CD application exists and create if not
       shell: bash
-      # env:
-      #   APP_NAME: my-app # Replace with your application name
-      #   REPO_URL: https://github.com/your-org/your-repo.git # Replace with your Git repository URL
-      #   PATH_IN_REPO: k8s/my-app # Replace with the path to your application manifests in the repo
-      #   DEST_NAMESPACE: default # Replace with your target namespace
-      #   DEST_SERVER: https://kubernetes.default.svc # Replace with your target cluster API server
       run: |
+        helm_params_received = false
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
-          echo "print of received file... ${{inputs.app_helm_values_file}}"
-          pwd
-          ls -la
-          cat ${{ inputs.app_helm_values_file}}
+          if ${{inputs.helm_params}}:  # This condition is True if helm_params is not empty
+            print("La liste de parametres helm n'est pas vide. On met les valeurs dans un array")
+            IFS=',' read -ra PARAMS <<< "${{ inputs.helm_params }}"
+            helm_params_received = true
+          fi        
+
+          # Initializer la commande de création de l'application
           echo "Argo CD application '${{inputs.app_name}}' does not exist. Creating it..."
-          argocd app create ${{inputs.app_name}} \
+          CMD="argocd app create ${{inputs.app_name}} \
             --repo ${{inputs.app_manifest_repo}} \
             --revision ${{ inputs.app_manifest_repo_branch }} \
             --path ${{inputs.app_manifest_path}} \
             --dest-namespace ${{inputs.app_dest_namespace}} \
             --dest-server https://kubernetes.default.svc \
             --project ${{ inputs.app_project_name }} \
-            #--values ${{ github.workspace }}/${{ inputs.app_helm_values_file }} \
-            #--helm-values ${{ inputs.app_helm_values_file }} \
-            --values-literal-file ${{ inputs.app_helm_values_file }} \
             --sync-policy automated # Or your desired sync policy \            
-            --grpc-web 
+            --grpc-web"
+
+          # S'il y a des parametres additionnels, on les ajoute
+          if helm_params_received then
+            for param in "${PARAMS[@]}"; do
+              # Trim leading/trailing whitespace and append the flag
+              CMD="$CMD --helm-set $(echo "$param" | xargs)"
+            done            
+          fi
+
+          # Exécution de la commande finale
+          echo "Running command: $CMD"
+          $CMD          
+
         else
           echo "Argo CD application '${{inputs.app_name}}' already exists. Skipping creation."
         fi        
