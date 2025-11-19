@@ -12,6 +12,9 @@ inputs:
   argocd_server:
     description: "URL du serveur Argo CD"
     required: true
+  argocd_version:
+    description: "La version d'argocd"
+    default: "2.10" # current version of argocd for the lab (202511)
   argocd_username:
     description: "Nom d'utilisateur Argo CD"
     default: "admin"
@@ -94,8 +97,8 @@ runs:
             echo "ArgoCD CLI not found, installing..."
             # Download the latest ArgoCD CLI for Linux AMD64
             # You can find the latest version from https://github.com/argoproj/argo-cd/releases/latest
-            LATEST_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep "tag_name" | cut -d : -f 2,3 | tr -d \" | tr -d , | awk '{print $1}')
-            wget https://github.com/argoproj/argo-cd/releases/download/${LATEST_VERSION}/argocd-linux-amd64
+            # LATEST_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep "tag_name" | cut -d : -f 2,3 | tr -d \" | tr -d , | awk '{print $1}')
+            wget https://github.com/argoproj/argo-cd/releases/download/${{inputs.argocd_version}}/argocd-linux-amd64
             sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
             rm argocd-linux-amd64
             echo "ArgoCD CLI installed."
@@ -160,7 +163,8 @@ runs:
             --dest-server https://kubernetes.default.svc \
             --project ${{ inputs.app_project_name }} \
             #--values ${{ github.workspace }}/${{ inputs.app_helm_values_file }} \
-            --helm-values ${{ inputs.app_helm_values_file }} \
+            #--helm-values ${{ inputs.app_helm_values_file }} \
+            --values-literal-file ${{ inputs.app_helm_values_file }} \
             --sync-policy automated # Or your desired sync policy \            
             --grpc-web 
         else
