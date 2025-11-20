@@ -134,8 +134,6 @@ runs:
 
     - name: Check if Argo CD application exists and create if not
       shell: bash
-      # env:
-      #   HELM_PARAMS_EXIST: false
       run: |
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then   
 
@@ -151,13 +149,13 @@ runs:
             --sync-policy automated \            
             --grpc-web \"
 
-          echo "Vérification de la liste de params..."
-          if [ -z "${{ inputs.helm_params }}" ]; then
-            echo "Liste de helm params est vide"
-          else
-            echo "La liste de helm params est non vide, on les ajoute à la commande..."
-            CMD="$CMD ${{ inputs.helm_params }}"
-          fi   
+          # echo "Vérification de la liste de params..."
+          # if [ -z "${{ inputs.helm_params }}" ]; then
+          #   echo "Liste de helm params est vide"
+          # else
+          #   echo "La liste de helm params est non vide, on les ajoute à la commande..."
+          #   CMD="$CMD ${{ inputs.helm_params }}"
+          # fi   
 
           # Exécution de la commande finale
           echo "Running command: $CMD"
