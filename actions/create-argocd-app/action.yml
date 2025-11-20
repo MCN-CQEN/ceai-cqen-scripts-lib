@@ -146,7 +146,7 @@ runs:
             --dest-namespace ${{inputs.app_dest_namespace}} \
             --dest-server https://kubernetes.default.svc \
             --project ${{ inputs.app_project_name }} \
-            --sync-policy automated \            
+            --sync-policy automated \
             --grpc-web "
 
           echo "Vérification de la liste de params..."
