@@ -163,12 +163,8 @@ runs:
 
         else
           echo "Argo CD application ${{inputs.app_name}} already exists. Skipping creation."
-        fi        
+        fi
 
     - name: Assert Argo CD Application Health
       shell: bash
-      run: echo "final step, application ${{ inputs.app_name }} should have been created"  
-
-    # - name: Assert Argo CD Application Health
-    #   shell: bash
-    #   run: argocd app wait ${{ inputs.app_name}} --health --timeout 300        
+      run: argocd app wait ${{ inputs.app_name}} --health --timeout 300        
