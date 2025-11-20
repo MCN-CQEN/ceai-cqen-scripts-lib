@@ -170,7 +170,7 @@ runs:
             --dest-server https://kubernetes.default.svc \
             --project ${{ inputs.app_project_name }} \
             --sync-policy automated # Or your desired sync policy \            
-            --grpc-web"
+            --grpc-web \"
 
           # S'il y a des parametres additionnels, on les ajoute
           echo "Si la liste de helm params n'est pas vide alors ajouter comme helm parametres"
