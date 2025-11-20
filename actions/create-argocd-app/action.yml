@@ -148,12 +148,12 @@ runs:
       #   HELM_PARAMS_EXIST: false
       run: |
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
-
           HELM_PARAMS_EXIST=false
-          echo "helm params exist: $HELM_PARAMS_EXIST"
 
+          echo "verifying if liste de params helm est vide..."
           if [ -z "${{ inputs.helm_params }}" ]; then
-            #if [${{inputs.helm_params}}]; then  # This condition is True if helm_params is not empty
+            echo "liste de helm params est vide"
+          else
             echo "Liste de parametres helm non vide. On met les valeurs dans un array"
             IFS=',' read -ra PARAMS <<< "${{ inputs.helm_params }}"
             HELM_PARAMS_EXIST=true
@@ -173,6 +173,7 @@ runs:
             --grpc-web"
 
           # S'il y a des parametres additionnels, on les ajoute
+          echo "Si la liste de helm params n'est pas vide alors ajouter comme helm parametres"
           echo "helm params exist: $HELM_PARAMS_EXIST"
           if [$HELM_PARAMS_EXIST]; then
             for param in "${PARAMS[@]}"; do
