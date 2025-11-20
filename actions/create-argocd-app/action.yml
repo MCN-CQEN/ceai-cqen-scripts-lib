@@ -150,11 +150,12 @@ runs:
         if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
 
           HELM_PARAMS_EXIST=false
+          echo "helm params exist: $HELM_PARAMS_EXIST"
 
           if ${{inputs.helm_params}}:  # This condition is True if helm_params is not empty
             echo "Liste de parametres helm non vide. On met les valeurs dans un array"
             IFS=',' read -ra PARAMS <<< "${{ inputs.helm_params }}"
-            HELM_PARAMS_EXIST=true
+            #HELM_PARAMS_EXIST=true
           fi        
 
           # Initializer la commande de création de l'application
