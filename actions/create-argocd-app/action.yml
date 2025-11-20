@@ -97,9 +97,6 @@ runs:
         if ! command -v argocd &> /dev/null
         then
             echo "ArgoCD CLI not found, installing..."
-            # Download the latest ArgoCD CLI for Linux AMD64
-            # You can find the latest version from https://github.com/argoproj/argo-cd/releases/latest
-            # LATEST_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep "tag_name" | cut -d : -f 2,3 | tr -d \" | tr -d , | awk '{print $1}')
             wget https://github.com/argoproj/argo-cd/releases/download/${{inputs.argocd_version}}/argocd-linux-amd64
             sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
             rm argocd-linux-amd64
@@ -123,10 +120,7 @@ runs:
           echo "project_exists=true" >> $GITHUB_OUTPUT
         else
           echo "project_exists=false" >> $GITHUB_OUTPUT
-        fi
-        # Attempt to get the project and capture the exit code
-        # argocd proj get ${{ inputs.app_name }} &> /dev/null
-        # echo "exit_code=$?" >> $GITHUB_OUTPUT    
+        fi 
     
     - name: Quitter si le projet n'existe pas
       shell: bash
@@ -138,27 +132,12 @@ runs:
           echo "Project ${{inputs.app_project_name}} exists, will continue"
         fi
 
-    # - name: List files for debugging
-    #   shell: bash
-    #   run: ls -R ${{ github.workspace }}
-
     - name: Check if Argo CD application exists and create if not
       shell: bash
       # env:
       #   HELM_PARAMS_EXIST: false
       run: |
-        if ! argocd app get ${{inputs.app_name}} &> /dev/null; then
-          HELM_PARAMS_EXIST=false
-
-          echo "verifying if liste de params helm est vide..."
-          if [ -z "${{ inputs.helm_params }}" ]; then
-            echo "liste de helm params est vide"
-          else
-            echo "Liste de parametres helm non vide. On met les valeurs dans un array"
-            IFS=',' read -ra PARAMS <<< "${{ inputs.helm_params }}"
-            HELM_PARAMS_EXIST=true
-            echo "helm params exist: $HELM_PARAMS_EXIST"
-          fi        
+        if ! argocd app get ${{inputs.app_name}} &> /dev/null; then   
 
           # Initializer la commande de création de l'application
           echo "Argo CD application '${{inputs.app_name}}' does not exist. Creating it..."
@@ -172,16 +151,13 @@ runs:
             --sync-policy automated # Or your desired sync policy \            
             --grpc-web \"
 
-          # S'il y a des parametres additionnels, on les ajoute
-          echo "Si la liste de helm params n'est pas vide alors ajouter comme helm parametres"
-          echo "helm params exist: $HELM_PARAMS_EXIST"
-          if [[ $HELM_PARAMS_EXIST == "true" ]]; then
-             CMD="$CMD ${{ inputs.helm_params }}"
-            # for param in "${PARAMS[@]}"; do
-            #   # Trim leading/trailing whitespace and append the flag
-            #   CMD="$CMD --helm-set $(echo "$param" | xargs)"
-            # done            
-          fi
+          echo "Vérification de la liste de params..."
+          if [ -z "${{ inputs.helm_params }}" ]; then
+            echo "Liste de helm params est vide"
+          else
+            echo "La liste de helm params est non vide, on les ajoute à la commande..."
+            CMD="$CMD ${{ inputs.helm_params }}"
+          fi   
 
           # Exécution de la commande finale
           echo "Running command: $CMD"
@@ -190,28 +166,6 @@ runs:
         else
           echo "Argo CD application '${{inputs.app_name}}' already exists. Skipping creation."
         fi        
-
-    
-      
-    # - name: Create Argo CD app if it doesn't exist
-    #   shell: bash
-    #   #if: steps.check_project.outputs.project_exists == 'false'        
-    #   #if: steps.check_project.outputs.exit_code != '0' #project doesn't exist
-    #   #if: failure() # previous step failed
-    #   #if: ${{ failure() }} # This step runs only if previous step failed
-    #   run: |
-    #       echo "project does not exist. Will be created."        
-    #       argocd app create ${{ inputs.app_name }} \
-    #       --repo ${{ inputs.app_manifest_repo }} \
-    #       --revision ${{ inputs.app_manifest_repo_branch }} \
-    #       --path ${{ inputs.app_manifest_path }} \
-    #       --dest-namespace ${{ inputs.app_dest_namespace }} \
-    #       --dest-server https://kubernetes.default.svc \
-    #       --directory-recurse \
-    #       --upsert \
-    #       --grpc-web
-    #       # --sync-policy automatic 
-
 
     - name: Assert Argo CD Application Health
       shell: bash
