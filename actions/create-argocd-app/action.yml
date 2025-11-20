@@ -175,7 +175,7 @@ runs:
           # S'il y a des parametres additionnels, on les ajoute
           echo "Si la liste de helm params n'est pas vide alors ajouter comme helm parametres"
           echo "helm params exist: $HELM_PARAMS_EXIST"
-          if [$HELM_PARAMS_EXIST]; then
+          if [[ "${{ HELM_PARAMS_EXIST }}" == "true" ]]; then
             for param in "${PARAMS[@]}"; do
               # Trim leading/trailing whitespace and append the flag
               CMD="$CMD --helm-set $(echo "$param" | xargs)"
