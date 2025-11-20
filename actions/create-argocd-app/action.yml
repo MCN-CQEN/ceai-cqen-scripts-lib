@@ -170,7 +170,8 @@ runs:
             --grpc-web"
 
           # S'il y a des parametres additionnels, on les ajoute
-          if $HELM_PARAMS_EXIST then
+          echo "helm params exist: $HELM_PARAMS_EXIST"
+          if [$HELM_PARAMS_EXIST]; then
             for param in "${PARAMS[@]}"; do
               # Trim leading/trailing whitespace and append the flag
               CMD="$CMD --helm-set $(echo "$param" | xargs)"
