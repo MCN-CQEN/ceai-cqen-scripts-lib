@@ -164,7 +164,7 @@ runs:
           $CMD          
 
         else
-          echo "Argo CD application '${{inputs.app_name}}' already exists. Skipping creation."
+          echo "Argo CD application ${{inputs.app_name}} already exists. Skipping creation."
         fi        
 
     - name: Assert Argo CD Application Health
