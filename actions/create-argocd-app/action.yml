@@ -41,20 +41,13 @@ inputs:
   app_manifest_path:
     description: "Chemin du manifeste de l'application"
     required: true
-  # app_helm_values_file:
-  #   description: "Le fichier de configuration additionnel des variables d'environnement de l'application."
   helm_params:
     description: 'La liste de parametres helm avec le format "key1=val1,key2=val2"'
     default: ''
 
 runs:
   using: "composite"
-  steps:
-
-    # Secrets manager pour le mdp de l'admin d'ArgoCD
-
-    # - name: Checkout code
-    #   uses: actions/checkout@v3        
+  steps:   
 
     - name: "Configure AWS credentials for role ${{ inputs.role_to_assume }}"
       uses: aws-actions/configure-aws-credentials@v4          
