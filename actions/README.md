@@ -1,4 +1,4 @@
-# Scripts commons pour GitHub Actions
+# Scripts communs pour GitHub Actions
 
 ## Introduction
 L'objectif de ce repo est la réutilisation des scripts génériques et nécessaires pour l’automatisation dans GitHub Actions.
@@ -78,6 +78,15 @@ Pour plus de détails, consultez la [documentation officielle de GitHub sur les 
 Pour la création d'un script:
 - Dans ce repertoire, ajoutez un dossier qui décribe le propos de l'action (i.e.: build-image)
 - Dans le dossier créé, ajoutez un fichier action.yml et ajoutez les étapes à suivre comme indiqué dans l'exemple (section 3).
+
+## Liste de scripts Créés
+
+| Nom | Description | Documentation | Fichier |
+|------|--------|---------|---------|
+|Create ArgoCD Application | Permet d’automatiser la création d’une application Argo CD si elle n’existe pas déjà. | [Readme](./create-argocd-app/README.md) | [action](./create-argocd-app/action.yml) |
+|Gitflow | Workflows réutilisables facilitant la mise en oeuvre du GitFlow dans les dépôts de code du CQEN | [Readme](./gitflow/README.md) | [plusieurs fichiers, voir répértoire](./gitflow/README.md) |
+|Pulish image to registry| Publie une image au registre des conteneurs d'images | [Readme](./publish-image-to-registry/README.md) | [action](./publish-image-to-registry/action.yml)|
+
 
 ## Références
 - [GitHub Docs - Composite Actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-composite-action)
