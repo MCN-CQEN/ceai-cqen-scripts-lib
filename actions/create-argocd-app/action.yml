@@ -2,13 +2,6 @@ name: "créer une application dans ArgoCD"
 description: "créer une application dans ArgoCD si elle n'existe pas"
 
 inputs:
-  role_to_assume:
-    description: "Nom du rôle AWS"
-    required: true
-  aws_region:
-    description: "Région AWS"
-    required: true
-    default: "ca-central-1"
   argocd_server:
     description: "URL du serveur Argo CD"
     required: true
@@ -18,12 +11,9 @@ inputs:
   argocd_username:
     description: "Nom d'utilisateur Argo CD"
     default: "admin"
-  sm_argocd_admin_creds_secret_name:
-    description: "Nom du secret dans Secrets Manager"
+  argocd_password:
+    description: "'Mot de passe de l'utilisateur Argo CD"
     required: true
-  sm_argocd_admin_creds_secret_key:
-    description: "Nom du secret dans Secrets Manager"
-    required: true    
   app_project_name:
     description: "Le nom du projet où l'application sera déployée"
     required: true
@@ -48,42 +38,7 @@ inputs:
 
 runs:
   using: "composite"
-  steps:   
-
-    - name: "Configure AWS credentials for role ${{ inputs.role_to_assume }}"
-      uses: aws-actions/configure-aws-credentials@v4          
-      with:                
-        role-to-assume: ${{ inputs.role_to_assume }}
-        role-session-name: GitHub_to_AWS_via_FederatedOIDC
-        aws-region: ${{ inputs.aws_region }}
-
-    - name: Obtenir le secret du mdp de l'admin d'ArgoCD dans secretsmanager
-      id: secretsmanager
-      uses: aws-actions/aws-secretsmanager-get-secrets@v1 
-      with:
-        secret-ids: |
-          ARGOCD_ADM_CREDS,${{ inputs.sm_argocd_admin_creds_secret_name }}
-        #name or ARN of the secret
-        parse-json-secrets: true # Set to true if your secret value is JSON
-
-    - name: Verify secret existence ${{ inputs.sm_argocd_admin_creds_secret_key}}
-      shell: bash    
-      run: |
-        SECRET_CONCATENATED_NAME="ARGOCD_ADM_CREDS_${{ inputs.sm_argocd_admin_creds_secret_key }}"
-        echo "SECRET_CONCATENATED_NAME:  " $SECRET_CONCATENATED_NAME
-        SECRET_VALUE=${!SECRET_CONCATENATED_NAME}
-
-        # Set it as an environment variable for subsequent steps
-        echo "ADM_PWD=${SECRET_VALUE}" >> $GITHUB_ENV
-        
-        echo "The value of ${SECRET_CONCATENATED_NAME} is: ${SECRET_VALUE}, from env: ${{ env.ADM_PWD }}"
-        if [ -n "$SECRET_VALUE" ]; then
-          echo "$SECRET_CONCATENATED_NAME exists and its value is: $SECRET_VALUE"
-        else
-          #echo "Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} exists and is available."
-          echo "Error: Secret ${{ inputs.sm_argocd_admin_creds_secret_name }} or its key ${{ inputs.sm_argocd_admin_creds_secret_key }} not found in AWS Secrets Manager."
-          exit 1          
-        fi    
+  steps:    
 
     - name: Vérifier et installer ArgoCD CLI
       shell: bash    
@@ -103,7 +58,7 @@ runs:
     - name: Login au Argo CD
       shell: bash
       run: |  
-        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "${{ env.ADM_PWD }}" --grpc-web --insecure
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "${{ inputs.argocd_password }}" --grpc-web --insecure
 
     - name: Check si le projet Argo CD existe
       id: check_project

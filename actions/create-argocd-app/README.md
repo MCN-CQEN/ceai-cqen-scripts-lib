@@ -2,7 +2,7 @@
 
 Cette GitHub Action permet d’automatiser la création d’une application Argo CD si elle n’existe pas déjà.
 
-Elle gère l’authentification AWS (assume-role), la récupération du mot de passe ArgoCD depuis Secrets Manager, l’installation de l’CLI ArgoCD, la vérification de l’existence du projet et de l’application, puis la création automatique avec des paramètres Helm optionnels.
+Elle installe l’CLI ArgoCD si nécessaire, se connecte au serveur, vérifie l’existence du projet, crée l’application, ajoute les paramètres Helm éventuels, puis attend que l’application soit Healthy.
 
 ## Table des matières
 
@@ -20,37 +20,32 @@ Elle gère l’authentification AWS (assume-role), la récupération du mot de p
 Cette action GitHub automatise la gestion d’applications ArgoCD dans un contexte CI/CD.
 Elle :
 
-- se connecte à AWS via un rôle IAM ;
-- récupère le mot de passe admin ArgoCD depuis AWS Secrets Manager ;
 - installe et configure le CLI ArgoCD si nécessaire ;
-- se connecte au serveur ArgoCD ;
-- vérifie l’existence du projet ArgoCD ;
+- se connecte à Argo CD via utilisateur/mot de passe ;
+- vérifie que le projet existe (sinon interrompt proprement) ;
 - crée l’application ArgoCD si elle n'existe pas ;
-- applique automatiquement les paramètres Helm fournis ;
-- attend que l’application soit en Healthy state.
+- applique les paramètres Helm fournis sous forme key=value ;
+- attend que l’application soit Healthy avant de terminer le job.
 
 ## Fonctionnalités
 
-- 🔐 Assume-role AWS et récupération de secrets
 - 🚀 Installation automatique de l’ArgoCD CLI
-- 🔑 Login automatique au serveur ArgoCD
+- 🔑 Authentification simple via username / password
 - 📁 Vérification de l’existence du projet ArgoCD
 - 🏗️ Création conditionnelle d’une application ArgoCD
 - ⚙️ Support des paramètres Helm (key=val)
 - ⏳ Validation de la santé de l’application (argocd app wait)
 - 🛑 Sort proprement si le projet ArgoCD n’existe pas
+- Compatible ArgoCD >= v2.x
 
 ## Entrées (inputs)
 
 | Nom | Description | Obligatoire | Valeur par défaut |
 |------|--------|---------|---------|
-|role_to_assume|Nom du rôle AWS à assumer|✅|—|
-|aws_region|Région AWS|❗|ca-central-1|
 |argocd_server|URL du serveur ArgoCD|✅|—|
 |argocd_version|Version du CLI ArgoCD à installer (même version que ArgoCD de travail)|❗|v2.10.20|
 |argocd_username|Nom d’utilisateur ArgoCD|❗|admin|
-|sm_argocd_admin_creds_secret_name|Nom du secret AWS contenant les creds|✅|—|
-|sm_argocd_admin_creds_secret_key|Clé à extraire à l’intérieur du secret|✅|—|
+|argocd_password|Mot de passe ArgoCD|✅|-|
 |app_project_name|Projet ArgoCD où créer l’application. Le projet devrait déjà exister, si non, le workflow ne continue pas.|✅|—|
 |app_name|Nom de l’application ArgoCD|✅|—|
 |app_dest_namespace|Namespace cible sur Kubernetes|❗|argocd|
@@ -61,17 +56,16 @@ Elle :
 
 ## Comportement général
 
-1. Configure AWS via aws-actions/configure-aws-credentials.
-2. Récupère le secret ArgoCD admin depuis AWS Secrets Manager.
-3. Vérifie que la clé existe dans le secret.
-4. Installe le CLI ArgoCD si absent.
-5. Login au serveur ArgoCD.
-6. Vérifie si le projet ArgoCD existe — sinon arrête le workflow.
-7. Vérifie si l’application existe ; si non :
-8. construit la commande argocd app create
-9. applique les paramètres helm si fournis
-10. crée l’application
-11. Attend que l’application devienne Healthy.
+1. Installe le CLI ArgoCD si absent.
+2. Se connecte au serveur Argo CD via username/password.
+3. Vérifie si le projet ArgoCD existe.
+4. Si le projet n'existe pas, le workflow s'arrête proprement.
+5. Vérifie si l’application existe.
+6. Si elle n'existe pas:
+    - construit la commande `argocd app create`
+    - applique les paramètres helm si fournis
+    - crée l’application
+7. Attend que l’application devienne Healthy.
 
 ## Utilisation
 
@@ -89,10 +83,9 @@ jobs:
         #uses: ./.github/actions/create-argocd-app
         uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/create-argocd-app@main
         with:
-          role_to_assume: arn:aws:iam::111111111111:role/MyRole
           argocd_server: argocd.example.com
-          sm_argocd_admin_creds_secret_name: argocd/admin
-          sm_argocd_admin_creds_secret_key: password
+          argocd_username: ${{ secrets.ARGOCD_USERNAME }}
+          argocd_password: ${{ secrets.ARGOCD_ADMIN_PASSWORD }}          
           app_project_name: demo-project
           app_name: demo-app
           app_manifest_repo: https://github.com/myorg/myrepo.git
@@ -107,31 +100,23 @@ helm_params: "image.tag=1.2.3,replicaCount=2"
 
 ## Dépendances
 
-- AWS Actions
-    - aws-actions/configure-aws-credentials@v4
-    - aws-actions/aws-secretsmanager-get-secrets@v1
 - ArgoCD CLI
     - installé automatiquement si absent
-- Accès au :
-    - rôle IAM fourni
-    - secret dans AWS Secrets Manager
-    - serveur ArgoCD
+- Accès réseau au serveur Argo CD
+- Identifiants ArgoCD fonctionnels
+- Éventuellement : GitOps repo public ou privé
 
 ## Troubleshooting
 
-❌ "Error: secret not found"
-    
-    Le secret ou la clé n’existe pas dans AWS Secrets Manager.
+❌ Login échoue
 
+    Vérifier l’URL (HTTPS requis)
+    Vérifier --grpc-web et --insecure selon la configuration de votre API server
+    Vérifier le mot de passe fourni
+   
 ❌ "project does not exist, exit workflow" 
     
     Le projet ArgoCD n’a pas été créé par l’administrateur.
-
-❌ Login échoue
-
-    Vérifie :
-        l’URL du serveur (souvent --grpc-web doit être activé)
-        le mot de passe extrait
 
 ❌ L’application ne devient jamais Healthy
 
