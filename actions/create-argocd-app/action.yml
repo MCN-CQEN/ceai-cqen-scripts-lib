@@ -26,6 +26,7 @@ inputs:
     required: true    
   app_project_name:
     description: "Le nom du projet où l'application sera déployée"
+    required: true
   app_name:
     description: "Le nom de l'application"
     required: true
