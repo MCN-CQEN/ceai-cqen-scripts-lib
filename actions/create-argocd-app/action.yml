@@ -84,7 +84,7 @@ runs:
     - name: Check if Argo CD application exists and create if not
       shell: bash
       run: |
-        if ! argocd app get ${{inputs.app_name}} &> /dev/null; then   
+        if ! argocd app get ${{inputs.app_name}} --app-namespace ${{ inputs.app_dest_namespace }} &> /dev/null; then   
 
           # Initializer la commande de création de l'application
           echo "Argo CD application '${{inputs.app_name}}' does not exist. Creating it..."
