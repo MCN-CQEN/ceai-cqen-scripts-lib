@@ -86,7 +86,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create ArgoCD App
-        uses: ./.github/actions/create-argocd-app
+        #uses: ./.github/actions/create-argocd-app
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/create-argocd-app@main
         with:
           role_to_assume: arn:aws:iam::111111111111:role/MyRole
           argocd_server: argocd.example.com
