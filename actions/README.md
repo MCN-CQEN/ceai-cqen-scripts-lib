@@ -1,4 +1,10 @@
-# Scripts commons pour GitHub Actions
+# Scripts communs pour GitHub Actions
+
+## Table des matières
+- [Introduction](./README.md#introduction)
+- [Explication de "Composite Actions"](./README.md#explication-de-composite-actions)
+- [Liste de scripts Créés](./README.md#liste-de-scripts-créés)
+- [Références](./README.md#références)
 
 ## Introduction
 L'objectif de ce repo est la réutilisation des scripts génériques et nécessaires pour l’automatisation dans GitHub Actions.
@@ -6,6 +12,8 @@ L'objectif de ce repo est la réutilisation des scripts génériques et nécessa
 Il existe deux manières de réutiliser des scripts:
 - workflows réutilisables
 - composite actions
+
+## Explication de "Composite Actions"
 
 ### Composite actions
 Une composite action dans GitHub Actions est une manière de regrouper plusieurs étapes d'un workflow en une seule action réutilisable. Cela permet de simplifier et de centraliser des tâches communes, tout en évitant la duplication de code dans différents workflows.
@@ -78,6 +86,17 @@ Pour plus de détails, consultez la [documentation officielle de GitHub sur les 
 Pour la création d'un script:
 - Dans ce repertoire, ajoutez un dossier qui décribe le propos de l'action (i.e.: build-image)
 - Dans le dossier créé, ajoutez un fichier action.yml et ajoutez les étapes à suivre comme indiqué dans l'exemple (section 3).
+
+
+## Liste de scripts Créés
+
+| Nom | Description | Documentation | Fichier |
+|------|--------|---------|---------|
+|Gitflow | Workflows réutilisables facilitant la mise en oeuvre du GitFlow dans les dépôts de code du CQEN | [Readme](./gitflow/README.md) | [plusieurs fichiers, voir répertoire](./gitflow/README.md) |
+|Infra validate tf|Valide le code Terraform|[Readme](./infra-validate-tf/README.md)|[action](./infra-validate-tf/action.yml)|
+|Login S3|Enregistre les logs des tests et des déploiements dans un bucket Amazon S3|[Readme](./logging-s3/README.md)|[action](./logging-s3/action.yml)|
+|Pulish image to registry| Publie une image au registre des conteneurs d'images | [Readme](./publish-image-to-registry/README.md) | [action](./publish-image-to-registry/action.yml)|
+
 
 ## Références
 - [GitHub Docs - Composite Actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-composite-action)
