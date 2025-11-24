@@ -1,0 +1,120 @@
+name: "créer une application dans ArgoCD"
+description: "créer une application dans ArgoCD si elle n'existe pas"
+
+inputs:
+  argocd_server:
+    description: "URL du serveur Argo CD"
+    required: true
+  argocd_version:
+    description: "La version d'argocd"
+    default: "v2.10.20" # current version of argocd for the lab (202511)
+  argocd_username:
+    description: "Nom d'utilisateur Argo CD"
+    default: "admin"
+  argocd_password:
+    description: "'Mot de passe de l'utilisateur Argo CD"
+    required: true
+  app_project_name:
+    description: "Le nom du projet où l'application sera déployée"
+    required: true
+  app_name:
+    description: "Le nom de l'application"
+    required: true
+  app_dest_namespace: 
+    description: "Espace de destination du projet Argo CD"
+    default: "argocd"
+  app_manifest_repo:
+    description: "URL du dépôt Git pour le manifeste de l'application"
+    required: true
+  app_manifest_repo_branch:
+    description: "Récupérer la branche du dépôt Git pour le manifeste de l'application"
+    default: "main"
+  app_manifest_path:
+    description: "Chemin du manifeste de l'application"
+    required: true
+  helm_params:
+    description: 'La liste de parametres helm avec le format "key1=val1,key2=val2"'
+    default: ''
+
+runs:
+  using: "composite"
+  steps:    
+
+    - name: Vérifier et installer ArgoCD CLI
+      shell: bash    
+      run: |
+        if ! command -v argocd &> /dev/null
+        then
+            echo "ArgoCD CLI not found, installing..."
+            wget https://github.com/argoproj/argo-cd/releases/download/${{inputs.argocd_version}}/argocd-linux-amd64
+            sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+            rm argocd-linux-amd64
+            echo "ArgoCD CLI installed."
+        else
+            echo "ArgoCD CLI is already installed."
+        fi
+        argocd version --client # Verify installation
+
+    - name: Login au Argo CD
+      shell: bash
+      run: |  
+        argocd login ${{ inputs.argocd_server }} --username ${{ inputs.argocd_username }} --password "${{ inputs.argocd_password }}" --grpc-web --insecure
+
+    - name: Check si le projet Argo CD existe
+      id: check_project
+      continue-on-error: true # This ensures the step won't fail the workflow if the command errors
+      shell: bash
+      run: |
+        if argocd proj get ${{ inputs.app_project_name }}; then
+          echo "project_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "project_exists=false" >> $GITHUB_OUTPUT
+        fi 
+    
+    - name: Quitter si le projet n'existe pas
+      shell: bash
+      run: |
+        if ${{steps.check_project.outputs.project_exists == 'false'}}; then
+          echo "Projet ${{inputs.app_project_name}} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
+          exit 0
+        else
+          echo "Project ${{inputs.app_project_name}} exists, will continue"
+        fi
+
+    - name: Check if Argo CD application exists and create if not
+      shell: bash
+      run: |
+        if ! argocd app get ${{inputs.app_name}} --app-namespace ${{ inputs.app_dest_namespace }} &> /dev/null; then   
+
+          # Initializer la commande de création de l'application
+          echo "Argo CD application '${{inputs.app_name}}' does not exist. Creating it..."
+          CMD="argocd app create ${{inputs.app_name}} \
+            --repo ${{inputs.app_manifest_repo}} \
+            --revision ${{ inputs.app_manifest_repo_branch }} \
+            --path ${{inputs.app_manifest_path}} \
+            --dest-namespace ${{inputs.app_dest_namespace}} \
+            --dest-server https://kubernetes.default.svc \
+            --project ${{ inputs.app_project_name }} \
+            --sync-policy automated \
+            --sync-option CreateNamespace=true \
+            --grpc-web "
+
+          echo "Vérification de la liste de params..."
+          if [ -z "${{ inputs.helm_params }}" ]; then
+            echo "Liste de helm params est vide"
+          else
+            echo "La liste de helm params est non vide, on les ajoute à la commande..."
+            CMD="$CMD ${{ inputs.helm_params }}"
+          fi   
+
+          # Exécution de la commande finale
+          echo "Running command: $CMD"
+          $CMD          
+
+        else
+          echo "Argo CD application ${{inputs.app_name}} already exists. Skipping creation."
+        fi
+
+    - name: Assert Argo CD Application Health
+      shell: bash
+      run: argocd app wait ${{ inputs.app_name}} --health --timeout 300        

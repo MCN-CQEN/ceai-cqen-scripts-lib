@@ -1,0 +1,73 @@
+name: Créer un application dans ArgoCD
+description: | 
+  Exemple d'appel au script de céation d'une application dans un project existant en ArgoCD.
+  Requis: 
+    - Un projet a été déjà créé dans ArgoCD.
+    - Cet exemple utilise les secrets et les variables d'environnement dans l'environnement du travail du dépôt.
+    - La section "helm_values" est optionnelle et elle est propre à l'application à être déployée.
+      - Adaptez cette section à votre application à déployer si vous avez besoin de remplacer quelques valeurs de vos scripts helm chart.
+
+on: 
+    push:
+      branches:
+        - dev
+        #- feature/*
+
+# Permission can be added at job level or workflow level    
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  call_to_argocd_create_app:
+    runs-on: ubuntu-latest
+    environment: "dev"    
+    name: A job to call the create argocd app script
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: "dev"
+
+      - id: helm_values
+        shell: bash
+        run: |
+          echo "génération de liste de parametres helm..."
+          HELM_PARAMS=(
+            "--helm-set" "db.dbUser=${{ secrets.DB_USER}}"
+            "--helm-set" "db.dbName=${{ secrets.DB_NAME }}"
+            "--helm-set" "db.dbPassword=${{ secrets.DB_PASSWORD}}"
+            "--helm-set" "global.projectName=${{ vars.APP_PROJECT_NAME }}"
+            "--helm-set" "ss.host=${{ vars.APP_HOST_PATH }}"
+            "--helm-set" "ss.image.repository=${{ vars.SERVER_IMAGE_REPO }}"
+            "--helm-set" "ss.image.tag=${{ vars.SERVER_IMAGE_TAG }}"
+            "--helm-set" "ss.replicaCount=${{ vars.REPLICA_COUNT }}"
+            "--helm-set" "ss.admin.username=${{ secrets.ADMIN_USER }}"
+            "--helm-set" "ss.admin.password=${{ secrets.ADMIN_PASSWORD }}"
+            "--helm-set" "serviceExt.annotations.subnetAllowList=${{ vars.APP_SUBNET_ALLOW_LIST }}"
+            "--helm-set" "serviceExt.annotations.acmCertificateArn=${{ secrets.ACM_CERTIFICATE_ARN }}"
+            "--helm-set" "serviceExt.annotations.domainName=${{ vars.APP_HOST_PATH }}"
+            "--helm-set" "ingress.annotations.subnetAllowList=${{ vars.APP_SUBNET_ALLOW_LIST }}"
+            "--helm-set" "ingress.annotations.acmCertificateArn=${{ secrets.ACM_CERTIFICATE_ARN }}"
+            "--helm-set" "ingress.annotations.scheme=${{ vars.ALB_APP_SCHEME }}"
+            )
+          # Convert the array to a single string, suitable for passing
+          PARAMS_STRING="${HELM_PARAMS[*]}"
+          echo "print of PARAMS_STRING $PARAMS_STRING"
+          
+          # Pass the string to an env variable
+          echo "HELM_PARAMS=${PARAMS_STRING}" >> $GITHUB_ENV
+          
+      - id: argocd_project
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/create-argocd-app@main
+        with:        
+            argocd_server: ${{ vars.ARGOCD_SERVER }}
+            argocd_username: ${{ secrets.ARGOCD_USERNAME }}
+            argocd_password: ${{ secrets.ARGOCD_PASSWORD }}
+            app_project_name: ${{ vars.APP_PROJECT_NAME}}
+            app_name: ${{ vars.APP_NAME }}
+            app_dest_namespace: ${{ vars.APP_DEST_NAMESPACE }}
+            app_manifest_repo: ${{ vars.APP_MANIFEST_REPO }}
+            app_manifest_repo_branch: ${{ vars.APP_MANIFEST_REPO_BRANCH }}
+            app_manifest_path: ${{ vars.APP_MANIFEST_PATH }}
+            helm_params: "${{ env.HELM_PARAMS }}"
+
