@@ -92,10 +92,11 @@ Pour la création d'un script:
 
 | Nom | Description | Documentation | Fichier |
 |------|--------|---------|---------|
+|Create ArgoCD Application | Permet d’automatiser la création d’une application Argo CD dans un projet spécifique si elle n’existe pas déjà. | [Readme](./create-argocd-app/README.md) | [action](./create-argocd-app/action.yml) |
 |Gitflow | Workflows réutilisables facilitant la mise en oeuvre du GitFlow dans les dépôts de code du CQEN | [Readme](./gitflow/README.md) | [plusieurs fichiers, voir répertoire](./gitflow/README.md) |
 |Infra validate tf|Valide le code Terraform|[Readme](./infra-validate-tf/README.md)|[action](./infra-validate-tf/action.yml)|
 |Login S3|Enregistre les logs des tests et des déploiements dans un bucket Amazon S3|[Readme](./logging-s3/README.md)|[action](./logging-s3/action.yml)|
-|Pulish image to registry| Publie une image au registre des conteneurs d'images | [Readme](./publish-image-to-registry/README.md) | [action](./publish-image-to-registry/action.yml)|
+|Publish image to registry| Publie une image au registre des conteneurs d'images | [Readme](./publish-image-to-registry/README.md) | [action](./publish-image-to-registry/action.yml)|
 
 
 ## Références
