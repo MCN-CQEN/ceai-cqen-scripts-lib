@@ -78,7 +78,7 @@ jobs:
         uses: ./.github/workflows/logs-to-s3.yml
         with:
           bucket: my-logs-bucket
-          region: eu-west-1
+          region: ca-central-1
           role_to_assume: arn:aws:iam::123456789012:role/github-logs-writer
           status: success
           message: "Tests réussis"
