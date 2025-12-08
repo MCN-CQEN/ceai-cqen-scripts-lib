@@ -1,6 +1,252 @@
+# name: Deploy Keycloak Realm
+# description: |
+#   Déploie ou met à jour un realm Keycloak à partir d’un fichier JSON.
+#   Vérifie si le realm existe déjà, le crée sinon, ou le met à jour si nécessaire.
+
+# inputs:
+#   realm-file:
+#     description: "Chemin du fichier JSON du realm à déployer (relatif à la racine du repo)"
+#     required: true
+#   keycloak_url:
+#     description: "URL du serveur Keycloak"
+#     required: true
+#   keycloak_username:
+#     description: "Nom d'utilisateur Keycloak (admin)"
+#     required: true
+#   keycloak_password:
+#     description: "Mot de passe Keycloak (admin)"
+#     required: true
+
+# runs:
+#   using: "composite"
+#   steps:
+#     # -------------------------------------------------------------
+#     # Étape 1 : Checkout du dépôt (pour accéder au fichier realm)
+#     # -------------------------------------------------------------
+#     - name: Checkout repository
+#       uses: actions/checkout@v4
+
+#     # -------------------------------------------------------------
+#     # Étape 2 : Installation des outils requis
+#     # -------------------------------------------------------------
+#     # - name: Install jq and curl
+#     #   run: sudo apt-get update && sudo apt-get install -y jq curl
+#     #   shell: bash
+
+#     # -------------------------------------------------------------
+#     # Étape 3 : Résolution du chemin absolu du fichier realm
+#     # -------------------------------------------------------------
+#     - name: Resolve realm file path
+#       id: resolve
+#       run: |
+#         REALM_PATH="${{ github.workspace }}/${{ inputs.realm-file }}"
+#         echo "Chemin résolu : $REALM_PATH"
+
+#         if [ ! -f "$REALM_PATH" ]; then
+#           echo "Fichier introuvable : $REALM_PATH"
+#           echo "Contenu du répertoire courant :"
+#           ls -R "$(dirname "$REALM_PATH")" || true
+#           exit 1
+#         fi
+
+#         echo "Fichier trouvé : $REALM_PATH"
+#         echo "REALM_FILE=$REALM_PATH" >> $GITHUB_ENV
+#       shell: bash
+
+#     # -------------------------------------------------------------
+#     # Étape 4 : Debug (affiche le contenu et vérifie l'arrivée du fichier)
+#     # -------------------------------------------------------------
+#     - name: Debug realm file
+#       run: |
+#         echo "Vérification de la présence du fichier realm"
+#         echo "Chemin absolu : $REALM_FILE"
+#         ls -al "$(dirname "$REALM_FILE")"
+#         echo "Contenu du fichier :"
+#         head -n 20 "$REALM_FILE"
+#       shell: bash
+
+#     # -------------------------------------------------------------
+#     # Étape 5 : Validation du fichier JSON
+#     # -------------------------------------------------------------
+#     - name: Validate realm JSON
+#       run: |
+#         if ! jq empty "$REALM_FILE"; then
+#           echo "Fichier JSON invalide"
+#           exit 1
+#         fi
+
+#         REALM_NAME=$(jq -r '.realm // empty' "$REALM_FILE")
+#         if [ -z "$REALM_NAME" ]; then
+#           echo "Le champ 'realm' est manquant dans le JSON"
+#           exit 1
+#         fi
+
+#         echo "Realm validé : $REALM_NAME"
+#         echo "REALM_NAME=$REALM_NAME" >> $GITHUB_ENV
+#       shell: bash
+
+#     # -------------------------------------------------------------
+#     # Étape 6 : Obtenir un token d'accès admin
+#     # -------------------------------------------------------------
+
+#     - name: Get Keycloak token
+#       shell: bash
+#       env:
+#         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
+#         KEYCLOAK_USERNAME: ${{ inputs.keycloak_username }}
+#         KEYCLOAK_PASSWORD: ${{ inputs.keycloak_password}}
+#       run: |
+#         set -euo pipefail
+    
+#         : "${KEYCLOAK_URL:?KEYCLOAK_URL manquant}"
+#         : "${KEYCLOAK_USERNAME:?KEYCLOAK_USERNAME manquant}"
+#         : "${KEYCLOAK_PASSWORD:?KEYCLOAK_PASSWORD manquant}"
+    
+#         RESPONSE=$(curl -sS -X POST \
+#           "${KEYCLOAK_URL%/}/realms/master/protocol/openid-connect/token" \
+#           -H "Content-Type: application/x-www-form-urlencoded" \
+#           --data-urlencode "client_id=admin-cli" \
+#           --data-urlencode "username=${KEYCLOAK_USERNAME}" \
+#           --data-urlencode "password=${KEYCLOAK_PASSWORD}" \
+#           --data-urlencode "grant_type=password")
+    
+#         # Vérifie si la réponse contient un access_token
+#         if ! TOKEN=$(echo "$RESPONSE" | jq -r '.access_token // empty'); then
+#           echo "Erreur: réponse non JSON"
+#           echo "$RESPONSE" | head -c 500
+#           exit 1
+#         fi
+    
+#         if [[ -z "$TOKEN" ]]; then
+#           echo "Aucun access_token trouvé dans la réponse :"
+#           echo "$RESPONSE" | head -c 500
+#           exit 1
+#         fi
+    
+#         echo "Token récupéré (longueur=${#TOKEN})."
+#         echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+#     # - name: Get access token
+#     #   id: get-token
+#     #   run: |
+#     #     TOKEN=$(curl -s -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
+#     #       -H "Content-Type: application/x-www-form-urlencoded" \
+#     #       --data-urlencode "client_id=admin-cli" \
+#     #       --data-urlencode "username=${KEYCLOAK_USERNAME}" \
+#     #       --data-urlencode "password=${KEYCLOAK_PASSWORD}" \
+#     #       --data-urlencode "grant_type=password" | jq -r .access_token)
+
+#     #     if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+#     #       echo "Impossible d'obtenir un token"
+#     #       exit 1
+#     #     fi
+
+#     #     echo "token=$TOKEN" >> $GITHUB_OUTPUT
+#     #     echo "Token récupéré avec succès"
+#     #   shell: bash
+#       # env:
+#       #   KEYCLOAK_URL: ${{ inputs.keycloak_url }}
+#       #   KEYCLOAK_USERNAME: ${{ inputs.keycloak_username }}
+#       #   KEYCLOAK_PASSWORD: ${{ inputs.keycloak_password }}
+#       #   KEYCLOAK_API_CLIENT_SECRET: ${{ inputs.keycloak_api_client_secret }}
+
+#     # -------------------------------------------------------------
+#     # Étape 7 : Vérifie si le realm existe
+#     # -------------------------------------------------------------
+#     - name: Check if realm exists
+#       id: check-realm
+#       run: |
+#         STATUS=$(curl -s -o existing_realm.json -w "%{http_code}" \
+#           -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+#           "$KEYCLOAK_URL/admin/realms/$REALM_NAME")
+
+#         echo "status=$STATUS" >> $GITHUB_OUTPUT
+#         echo "Statut du realm : $STATUS"
+#       shell: bash
+#       env:
+#         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
+
+#     # -------------------------------------------------------------
+#     # Étape 8 : Créer le realm s’il n’existe pas
+#     # -------------------------------------------------------------
+#     - name: Create new realm
+#       if: steps.check-realm.outputs.status == '404'
+#       run: |
+#         echo "Création du nouveau realm : $REALM_NAME"
+
+#         RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST \
+#           "$KEYCLOAK_URL/admin/realms" \
+#           -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+#           -H "Content-Type: application/json" \
+#           --data-binary @"$REALM_FILE")
+
+#         HTTP_CODE=$(echo "$RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+#         BODY=$(echo "$RESPONSE" | sed -e 's/HTTPSTATUS:.*//g')
+
+#         if [ "$HTTP_CODE" -eq 201 ] || [ "$HTTP_CODE" -eq 204 ]; then
+#           echo "Realm créé avec succès"
+#         else
+#           echo "Échec de la création (HTTP $HTTP_CODE)"
+#           echo "$BODY"
+#           exit 1
+#         fi
+#       shell: bash
+#       env:
+#         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
+
+#     # -------------------------------------------------------------
+#     # Étape 9 : Mettre à jour le realm existant
+#     # -------------------------------------------------------------
+#     - name: Update existing realm
+#       if: steps.check-realm.outputs.status == '200'
+#       run: |
+#         echo "🛠️  Comparaison et mise à jour du realm existant..."
+
+#         jq 'del(.id, .notBefore, .accessTokenLifespan, .ssoSessionIdleTimeout, .ssoSessionMaxLifespan)' existing_realm.json > existing_clean.json
+#         jq 'del(.id, .notBefore, .accessTokenLifespan, .ssoSessionIdleTimeout, .ssoSessionMaxLifespan)' "$REALM_FILE" > new_clean.json
+
+#         if ! diff -q existing_clean.json new_clean.json >/dev/null 2>&1; then
+#           echo "Différences détectées, mise à jour en cours..."
+#           curl -s -X PUT "$KEYCLOAK_URL/admin/realms/$REALM_NAME" \
+#               -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+#               -H "Content-Type: application/json" \
+#               --data-binary @"$REALM_FILE"
+#         else
+#           echo "Aucune modification détectée"
+#         fi
+#       shell: bash
+#       env:
+#         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
+
+#     # -------------------------------------------------------------
+#     # Étape 10 : Vérification finale
+#     # -------------------------------------------------------------
+#     - name: Verify deployment
+#       run: |
+#         STATUS=$(curl -s -w "%{http_code}" -o /dev/null \
+#           -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+#           "$KEYCLOAK_URL/admin/realms/$REALM_NAME")
+
+#         if [ "$STATUS" = "200" ]; then
+#           echo "Déploiement vérifié avec succès : Realm '$REALM_NAME'"
+#         else
+#           echo "Échec de la vérification (HTTP $STATUS)"
+#           exit 1
+#         fi
+#       shell: bash
+#       env:
+#         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
+
+#     # -------------------------------------------------------------
+#     # Étape 11 : Nettoyage
+#     # -------------------------------------------------------------
+#     - name: Cleanup temporary files
+#       if: always()
+#       run: rm -f existing_realm.json existing_clean.json new_clean.json
+#       shell: bash
+
 name: Deploy Keycloak Realm
 description: |
-  Déploie ou met à jour un realm Keycloak à partir d’un fichier JSON.
+  Déploie ou met à jour un realm Keycloak à partir d'un fichier JSON.
   Vérifie si le realm existe déjà, le crée sinon, ou le met à jour si nécessaire.
 
 inputs:
@@ -27,14 +273,7 @@ runs:
       uses: actions/checkout@v4
 
     # -------------------------------------------------------------
-    # Étape 2 : Installation des outils requis
-    # -------------------------------------------------------------
-    # - name: Install jq and curl
-    #   run: sudo apt-get update && sudo apt-get install -y jq curl
-    #   shell: bash
-
-    # -------------------------------------------------------------
-    # Étape 3 : Résolution du chemin absolu du fichier realm
+    # Étape 2 : Résolution du chemin absolu du fichier realm
     # -------------------------------------------------------------
     - name: Resolve realm file path
       id: resolve
@@ -54,7 +293,7 @@ runs:
       shell: bash
 
     # -------------------------------------------------------------
-    # Étape 4 : Debug (affiche le contenu et vérifie l'arrivée du fichier)
+    # Étape 3 : Debug (affiche le contenu et vérifie l'arrivée du fichier)
     # -------------------------------------------------------------
     - name: Debug realm file
       run: |
@@ -66,7 +305,7 @@ runs:
       shell: bash
 
     # -------------------------------------------------------------
-    # Étape 5 : Validation du fichier JSON
+    # Étape 4 : Validation du fichier JSON
     # -------------------------------------------------------------
     - name: Validate realm JSON
       run: |
@@ -86,22 +325,21 @@ runs:
       shell: bash
 
     # -------------------------------------------------------------
-    # Étape 6 : Obtenir un token d'accès admin
+    # Étape 5 : Obtenir un token d'accès admin
     # -------------------------------------------------------------
-
     - name: Get Keycloak token
       shell: bash
       env:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
         KEYCLOAK_USERNAME: ${{ inputs.keycloak_username }}
-        KEYCLOAK_PASSWORD: ${{ inputs.keycloak_password}}
+        KEYCLOAK_PASSWORD: ${{ inputs.keycloak_password }}
       run: |
         set -euo pipefail
-    
+
         : "${KEYCLOAK_URL:?KEYCLOAK_URL manquant}"
         : "${KEYCLOAK_USERNAME:?KEYCLOAK_USERNAME manquant}"
         : "${KEYCLOAK_PASSWORD:?KEYCLOAK_PASSWORD manquant}"
-    
+
         RESPONSE=$(curl -sS -X POST \
           "${KEYCLOAK_URL%/}/realms/master/protocol/openid-connect/token" \
           -H "Content-Type: application/x-www-form-urlencoded" \
@@ -109,54 +347,31 @@ runs:
           --data-urlencode "username=${KEYCLOAK_USERNAME}" \
           --data-urlencode "password=${KEYCLOAK_PASSWORD}" \
           --data-urlencode "grant_type=password")
-    
+
         # Vérifie si la réponse contient un access_token
         if ! TOKEN=$(echo "$RESPONSE" | jq -r '.access_token // empty'); then
           echo "Erreur: réponse non JSON"
           echo "$RESPONSE" | head -c 500
           exit 1
         fi
-    
+
         if [[ -z "$TOKEN" ]]; then
           echo "Aucun access_token trouvé dans la réponse :"
           echo "$RESPONSE" | head -c 500
           exit 1
         fi
-    
+
         echo "Token récupéré (longueur=${#TOKEN})."
         echo "TOKEN=$TOKEN" >> $GITHUB_ENV
-    # - name: Get access token
-    #   id: get-token
-    #   run: |
-    #     TOKEN=$(curl -s -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
-    #       -H "Content-Type: application/x-www-form-urlencoded" \
-    #       --data-urlencode "client_id=admin-cli" \
-    #       --data-urlencode "username=${KEYCLOAK_USERNAME}" \
-    #       --data-urlencode "password=${KEYCLOAK_PASSWORD}" \
-    #       --data-urlencode "grant_type=password" | jq -r .access_token)
-
-    #     if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-    #       echo "Impossible d'obtenir un token"
-    #       exit 1
-    #     fi
-
-    #     echo "token=$TOKEN" >> $GITHUB_OUTPUT
-    #     echo "Token récupéré avec succès"
-    #   shell: bash
-      # env:
-      #   KEYCLOAK_URL: ${{ inputs.keycloak_url }}
-      #   KEYCLOAK_USERNAME: ${{ inputs.keycloak_username }}
-      #   KEYCLOAK_PASSWORD: ${{ inputs.keycloak_password }}
-      #   KEYCLOAK_API_CLIENT_SECRET: ${{ inputs.keycloak_api_client_secret }}
 
     # -------------------------------------------------------------
-    # Étape 7 : Vérifie si le realm existe
+    # Étape 6 : Vérifie si le realm existe
     # -------------------------------------------------------------
     - name: Check if realm exists
       id: check-realm
       run: |
         STATUS=$(curl -s -o existing_realm.json -w "%{http_code}" \
-          -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+          -H "Authorization: Bearer $TOKEN" \
           "$KEYCLOAK_URL/admin/realms/$REALM_NAME")
 
         echo "status=$STATUS" >> $GITHUB_OUTPUT
@@ -166,7 +381,7 @@ runs:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
 
     # -------------------------------------------------------------
-    # Étape 8 : Créer le realm s’il n’existe pas
+    # Étape 7 : Créer le realm s'il n'existe pas
     # -------------------------------------------------------------
     - name: Create new realm
       if: steps.check-realm.outputs.status == '404'
@@ -175,7 +390,7 @@ runs:
 
         RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST \
           "$KEYCLOAK_URL/admin/realms" \
-          -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+          -H "Authorization: Bearer $TOKEN" \
           -H "Content-Type: application/json" \
           --data-binary @"$REALM_FILE")
 
@@ -194,7 +409,7 @@ runs:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
 
     # -------------------------------------------------------------
-    # Étape 9 : Mettre à jour le realm existant
+    # Étape 8 : Mettre à jour le realm existant
     # -------------------------------------------------------------
     - name: Update existing realm
       if: steps.check-realm.outputs.status == '200'
@@ -207,9 +422,10 @@ runs:
         if ! diff -q existing_clean.json new_clean.json >/dev/null 2>&1; then
           echo "Différences détectées, mise à jour en cours..."
           curl -s -X PUT "$KEYCLOAK_URL/admin/realms/$REALM_NAME" \
-              -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+              -H "Authorization: Bearer $TOKEN" \
               -H "Content-Type: application/json" \
               --data-binary @"$REALM_FILE"
+          echo "Realm mis à jour avec succès"
         else
           echo "Aucune modification détectée"
         fi
@@ -218,18 +434,18 @@ runs:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
 
     # -------------------------------------------------------------
-    # Étape 10 : Vérification finale
+    # Étape 9 : Vérification finale
     # -------------------------------------------------------------
     - name: Verify deployment
       run: |
         STATUS=$(curl -s -w "%{http_code}" -o /dev/null \
-          -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+          -H "Authorization: Bearer $TOKEN" \
           "$KEYCLOAK_URL/admin/realms/$REALM_NAME")
 
         if [ "$STATUS" = "200" ]; then
-          echo "Déploiement vérifié avec succès : Realm '$REALM_NAME'"
+          echo "✅ Déploiement vérifié avec succès : Realm '$REALM_NAME'"
         else
-          echo "Échec de la vérification (HTTP $STATUS)"
+          echo "❌ Échec de la vérification (HTTP $STATUS)"
           exit 1
         fi
       shell: bash
@@ -237,7 +453,7 @@ runs:
         KEYCLOAK_URL: ${{ inputs.keycloak_url }}
 
     # -------------------------------------------------------------
-    # Étape 11 : Nettoyage
+    # Étape 10 : Nettoyage
     # -------------------------------------------------------------
     - name: Cleanup temporary files
       if: always()
