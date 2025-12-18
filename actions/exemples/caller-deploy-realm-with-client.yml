@@ -1,0 +1,285 @@
+name: Create Keycloak Client for Application
+# Utilise le service account pour créer un client Keycloak pour une application
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Palier cible'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      app_name:
+        description: 'Nom de l''application'
+        required: true
+        type: string
+      realm_name:
+        description: 'Realm Keycloak cible'
+        required: true
+        type: string
+      redirect_uris:
+        description: 'URIs de redirection (JSON array)'
+        required: true
+        type: string
+        default: '["https://app.example.com/callback"]'
+
+env:
+  AWS_REGION: ca-central-1
+
+jobs:
+  create-keycloak-client:
+    name: Créer le client Keycloak
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    # Permissions requises pour OIDC
+    permissions:
+      id-token: write
+      contents: read
+    
+    outputs:
+      client_id: ${{ steps.create-client.outputs.client_id }}
+      secret_arn: ${{ steps.store-secret.outputs.secret_arn }}
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq curl
+
+      - name: Get service account credentials from AWS Secrets Manager
+        id: get-sa-credentials
+        run: |
+          # Récupérer les credentials du service account créé lors du déploiement du realm
+          SECRET_NAME="keycloak/${{ inputs.environment }}/service-accounts/${{ inputs.realm_name }}"
+          
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "$SECRET_NAME" \
+            --query SecretString \
+            --output text)
+          
+          echo "::add-mask::$(echo $SECRET_JSON | jq -r '.client_secret')"
+          echo "client_id=$(echo $SECRET_JSON | jq -r '.client_id')" >> $GITHUB_OUTPUT
+          echo "client_secret=$(echo $SECRET_JSON | jq -r '.client_secret')" >> $GITHUB_OUTPUT
+          echo "token_url=$(echo $SECRET_JSON | jq -r '.token_url')" >> $GITHUB_OUTPUT
+          
+          echo "✅ Credentials du service account récupérés"
+
+      - name: Get service account token (client_credentials)
+        id: get-token
+        run: |
+          # Utiliser client_credentials pour obtenir un token
+          TOKEN_RESPONSE=$(curl -s -X POST "${{ steps.get-sa-credentials.outputs.token_url }}" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_id=${{ steps.get-sa-credentials.outputs.client_id }}" \
+            -d "client_secret=${{ steps.get-sa-credentials.outputs.client_secret }}" \
+            -d "grant_type=client_credentials")
+          
+          TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+          
+          if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
+            echo "❌ Échec de l'obtention du token"
+            echo "$TOKEN_RESPONSE"
+            exit 1
+          fi
+          
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "✅ Token service account obtenu"
+
+      - name: Get Keycloak URL
+        id: get-keycloak-url
+        run: |
+          SECRET_NAME="keycloak/${{ inputs.environment }}/admin"
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "$SECRET_NAME" \
+            --query SecretString \
+            --output text)
+          
+          echo "url=$(echo $SECRET_JSON | jq -r '.url')" >> $GITHUB_OUTPUT
+
+      - name: Check if client exists
+        id: check-client
+        run: |
+          APP_CLIENT_ID="${{ inputs.app_name }}-${{ inputs.environment }}"
+          
+          CLIENTS=$(curl -s \
+            -H "Authorization: Bearer ${{ steps.get-token.outputs.token }}" \
+            "${{ steps.get-keycloak-url.outputs.url }}/admin/realms/${{ inputs.realm_name }}/clients?clientId=$APP_CLIENT_ID")
+          
+          CLIENT_UUID=$(echo "$CLIENTS" | jq -r '.[0].id // empty')
+          
+          if [ -n "$CLIENT_UUID" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "uuid=$CLIENT_UUID" >> $GITHUB_OUTPUT
+            echo "ℹ️ Le client $APP_CLIENT_ID existe déjà"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "client_id=$APP_CLIENT_ID" >> $GITHUB_OUTPUT
+
+      - name: Create or update application client
+        id: create-client
+        run: |
+          APP_CLIENT_ID="${{ steps.check-client.outputs.client_id }}"
+          KEYCLOAK_URL="${{ steps.get-keycloak-url.outputs.url }}"
+          TOKEN="${{ steps.get-token.outputs.token }}"
+          
+          # Configuration du client pour l'application
+          CLIENT_CONFIG=$(cat << EOF
+          {
+            "clientId": "$APP_CLIENT_ID",
+            "name": "${{ inputs.app_name }}",
+            "description": "Client pour l'application ${{ inputs.app_name }}",
+            "enabled": true,
+            "clientAuthenticatorType": "client-secret",
+            "redirectUris": ${{ inputs.redirect_uris }},
+            "webOrigins": ["+"],
+            "publicClient": false,
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": false,
+            "protocol": "openid-connect",
+            "attributes": {
+              "post.logout.redirect.uris": "+",
+              "pkce.code.challenge.method": "S256"
+            },
+            "defaultClientScopes": [
+              "web-origins",
+              "acr",
+              "profile",
+              "roles",
+              "email"
+            ]
+          }
+          EOF
+          )
+          
+          if [ "${{ steps.check-client.outputs.exists }}" == "true" ]; then
+            echo "ℹ️ Mise à jour du client..."
+            CLIENT_UUID="${{ steps.check-client.outputs.uuid }}"
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
+              "$KEYCLOAK_URL/admin/realms/${{ inputs.realm_name }}/clients/$CLIENT_UUID" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$CLIENT_CONFIG")
+          else
+            echo "ℹ️ Création du client..."
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+              "$KEYCLOAK_URL/admin/realms/${{ inputs.realm_name }}/clients" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$CLIENT_CONFIG")
+          fi
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          
+          if [ "$HTTP_CODE" == "201" ] || [ "$HTTP_CODE" == "204" ]; then
+            echo "✅ Client configuré avec succès"
+          else
+            echo "❌ Échec (HTTP $HTTP_CODE)"
+            echo "$RESPONSE"
+            exit 1
+          fi
+          
+          # Récupérer l'UUID et le secret
+          CLIENTS=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            "$KEYCLOAK_URL/admin/realms/${{ inputs.realm_name }}/clients?clientId=$APP_CLIENT_ID")
+          
+          CLIENT_UUID=$(echo "$CLIENTS" | jq -r '.[0].id')
+          
+          # Récupérer le secret existant ou en générer un nouveau
+          SECRET_RESPONSE=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            "$KEYCLOAK_URL/admin/realms/${{ inputs.realm_name }}/clients/$CLIENT_UUID/client-secret")
+          
+          CLIENT_SECRET=$(echo "$SECRET_RESPONSE" | jq -r '.value')
+          
+          # Si pas de secret, en générer un
+          if [ "$CLIENT_SECRET" == "null" ] || [ -z "$CLIENT_SECRET" ]; then
+            SECRET_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer $TOKEN" \
+              "$KEYCLOAK_URL/admin/realms/${{ inputs.realm_name }}/clients/$CLIENT_UUID/client-secret")
+            CLIENT_SECRET=$(echo "$SECRET_RESPONSE" | jq -r '.value')
+          fi
+          
+          echo "::add-mask::$CLIENT_SECRET"
+          echo "client_id=$APP_CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "client_secret=$CLIENT_SECRET" >> $GITHUB_OUTPUT
+          echo "client_uuid=$CLIENT_UUID" >> $GITHUB_OUTPUT
+
+      - name: Store application client credentials
+        id: store-secret
+        run: |
+          APP_CLIENT_ID="${{ steps.create-client.outputs.client_id }}"
+          CLIENT_SECRET="${{ steps.create-client.outputs.client_secret }}"
+          KEYCLOAK_URL="${{ steps.get-keycloak-url.outputs.url }}"
+          
+          SECRET_NAME="apps/${{ inputs.environment }}/${{ inputs.app_name }}/keycloak"
+          
+          SECRET_VALUE=$(jq -n \
+            --arg clientId "$APP_CLIENT_ID" \
+            --arg clientSecret "$CLIENT_SECRET" \
+            --arg realm "${{ inputs.realm_name }}" \
+            --arg issuerUrl "$KEYCLOAK_URL/realms/${{ inputs.realm_name }}" \
+            --arg tokenUrl "$KEYCLOAK_URL/realms/${{ inputs.realm_name }}/protocol/openid-connect/token" \
+            --arg authUrl "$KEYCLOAK_URL/realms/${{ inputs.realm_name }}/protocol/openid-connect/auth" \
+            '{
+              client_id: $clientId,
+              client_secret: $clientSecret,
+              realm: $realm,
+              issuer_url: $issuerUrl,
+              token_url: $tokenUrl,
+              authorization_url: $authUrl
+            }')
+          
+          if aws secretsmanager describe-secret --secret-id "$SECRET_NAME" 2>/dev/null; then
+            aws secretsmanager put-secret-value \
+              --secret-id "$SECRET_NAME" \
+              --secret-string "$SECRET_VALUE"
+          else
+            aws secretsmanager create-secret \
+              --name "$SECRET_NAME" \
+              --description "Keycloak credentials for ${{ inputs.app_name }}" \
+              --secret-string "$SECRET_VALUE" \
+              --tags Key=Environment,Value=${{ inputs.environment }} \
+                     Key=Application,Value=${{ inputs.app_name }}
+          fi
+          
+          SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$SECRET_NAME" --query 'ARN' --output text)
+          echo "secret_arn=$SECRET_ARN" >> $GITHUB_OUTPUT
+          echo "✅ Credentials stockés dans AWS Secrets Manager"
+          echo "📍 Secret ARN: $SECRET_ARN"
+
+      - name: Afficher le résumé
+        run: |
+          echo "## 🔐 Client Keycloak créé" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Paramètre | Valeur |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Application** | ${{ inputs.app_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Client ID** | ${{ steps.create-client.outputs.client_id }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Realm** | ${{ inputs.realm_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Secret ARN** | ${{ steps.store-secret.outputs.secret_arn }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📍 Récupérer les credentials" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "aws secretsmanager get-secret-value \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --secret-id apps/${{ inputs.environment }}/${{ inputs.app_name }}/keycloak \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --query SecretString --output text | jq ." >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
