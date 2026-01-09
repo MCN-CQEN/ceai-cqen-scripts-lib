@@ -199,7 +199,6 @@ Pour se faire, allez dans les paramètres de votre dépôt, puis dans la section
 3. Activez les options 
     1. *Restrict deletions*
     2. *Require a pull request before merging*
-        - Sélectionnez `Merge` uniquement comme *Allow merge method* (à confirmer que c'est réellement requis)
     2. *Require status checks to pass*
         - Cliquez sur *Add checks* et rechercher le nom de la job contenue dans le workflow de validation des PR. 
             
