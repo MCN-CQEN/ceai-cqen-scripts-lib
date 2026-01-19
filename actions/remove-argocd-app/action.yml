@@ -1,0 +1,122 @@
+name: "créer une application dans ArgoCD"
+description: "créer une application dans ArgoCD si elle n'existe pas"
+
+inputs:
+  argocd_server:
+    description: "URL du serveur Argo CD"
+    required: true
+  argocd_version:
+    description: "La version d'argocd"
+    default: "v2.10.20" # current version of argocd for the lab (202511)
+  argocd_username:
+    description: "Nom d'utilisateur Argo CD"
+    default: "admin"
+  argocd_password:
+    description: "'Mot de passe de l'utilisateur Argo CD"
+    required: true
+  app_project_name:
+    description: "Le nom du projet où l'application sera déployée"
+    required: true
+  app_name:
+    description: "Le nom de l'application"
+    required: true
+  app_dest_namespace: 
+    description: "Espace de destination du projet Argo CD"
+    default: "defaultApp"
+  app_manifest_repo:
+    description: "URL du dépôt Git pour le manifeste de l'application"
+    required: true
+  app_manifest_repo_branch:
+    description: "Récupérer la branche du dépôt Git pour le manifeste de l'application"
+    default: "main"
+  app_manifest_path:
+    description: "Chemin du manifeste de l'application"
+    required: true
+  helm_params:
+    description: 'La liste de parametres helm avec le format "key1=val1,key2=val2"'
+    default: ''
+
+runs:
+  using: "composite"
+  steps:    
+
+    - name: Vérifier et installer ArgoCD CLI
+      shell: bash    
+      run: |
+        if ! command -v argocd &> /dev/null
+        then
+            echo "ArgoCD CLI not found, installing..."
+            wget https://github.com/argoproj/argo-cd/releases/download/${{inputs.argocd_version}}/argocd-linux-amd64
+            sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+            rm argocd-linux-amd64
+            echo "ArgoCD CLI installed."
+        else
+            echo "ArgoCD CLI is already installed."
+        fi
+        argocd version --client # Verify installation
+
+    - name: Login au Argo CD
+      shell: bash
+      run: |
+        set -e
+
+        echo "Connexion au serveur Argo CD : ${{ inputs.argocd_server }}"
+
+        if ! argocd login "${{ inputs.argocd_server }}" \
+          --username "${{ inputs.argocd_username }}" \
+          --password "${{ inputs.argocd_password }}" \
+          --grpc-web \
+          --insecure; 
+        then
+            echo "ERREUR : Impossible de se connecter à Argo CD."
+            echo "Causes possibles :"
+            echo "   - serveur Argo CD éteint"
+            echo "   - URL incorrecte"
+            echo "   - problème réseau"
+            echo "   - le cluster n’existe pas"
+            exit 1
+        fi
+
+        echo "Connexion Argo CD réussie"
+
+    - name: Check si le projet Argo CD existe
+      id: check_project
+      continue-on-error: true # This ensures the step won't fail the workflow if the command errors
+      shell: bash
+      run: |
+        if argocd proj get ${{ inputs.app_project_name }}; then
+          echo "project_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "project_exists=false" >> $GITHUB_OUTPUT
+        fi 
+    
+    - name: Quitter si le projet n'existe pas
+      shell: bash
+      run: |
+        if ${{steps.check_project.outputs.project_exists == 'false'}}; then
+          echo "Projet ${{inputs.app_project_name}} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
+          exit 0
+        else
+          echo "Project ${{inputs.app_project_name}} exists, will continue"
+        fi
+
+    - name: Check if Argo CD application exists and remove if exists
+      shell: bash
+      run: |
+        set -e
+
+        APP_NAME="${{ inputs.app_name }}"
+        APP_NAMESPACE="${{ inputs.app_dest_namespace }}"
+
+        echo "Vérification de l'existence de l'application Argo CD : $APP_NAME"
+
+        if argocd app get "$APP_NAME" --app-namespace "$APP_NAMESPACE" &> /dev/null; then
+          echo "Application '$APP_NAME' trouvée. Suppression en cours ..."
+          argocd app delete "$APP_NAME" \
+            --app-namespace "$APP_NAMESPACE" \
+            --cascade --yes --grpc-web
+
+          echo "Application '$APP_NAME' supprimée avec succès"
+        else
+          echo "Application '$APP_NAME' n'existe pas. Rien à supprimer."
+        fi      
