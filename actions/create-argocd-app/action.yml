@@ -48,6 +48,12 @@ inputs:
   github_app_private_key:
     description: "Clé privée GitHub App (contenu PEM)"
     required: false
+  app_ghcr_username:
+    description: "Le nom de l'utilisateur avec les droits d'exécution de pull une image du registre"
+    default: ""
+  app_ghcr_pat:
+    description: "Le jeton personnel d'accès de l'utilisateur app_ghcr_username"
+    default: ""    
 
 runs:
   using: "composite"
@@ -105,6 +111,19 @@ runs:
           --insecure
 
         rm -f "$PRIVATE_KEY_FILE"
+
+    # Register the GHCR as a private registry
+    - name: Vérifier s'il existe un ghcr username et pat
+      shell: bash
+      run: |
+        if ${{inputs.app_ghcr_username != ''}} && ${{ inputs.app_ghcr_pat != ''}}; then
+          echo "ghcr_username et ghcr_pat non vides alors, enregistrement du GHCR comme un registre privé"
+          #argocd repo add https://ghcr.io --username ${{inputs.app_ghcr_username}} --password ${{inputs.app_ghcr_pat}}
+          argocd repo add https://ghcr.io/mcn-cqen/ceai-cqen-labinfra-fournisseur-identite --username ${{inputs.app_ghcr_username}} --password ${{inputs.app_ghcr_pat}}
+          # list registered repos to confirm connection successful
+          echo "Liste de repos registrés pour confirmer la connexion"
+          argocd repo list
+        fi
 
     - name: Check si le projet Argo CD existe
       id: check_project
