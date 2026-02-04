@@ -94,7 +94,7 @@ runs:
         if ${{inputs.app_ghcr_username != ''}} && ${{ inputs.app_ghcr_pat != ''}}; then
           echo "ghcr_username et ghcr_pat non vides alors, enregistrement du GHCR comme un registre privé"
           #argocd repo add https://ghcr.io --username ${{inputs.app_ghcr_username}} --password ${{inputs.app_ghcr_pat}}
-          argocd registry add ghcr.io --username ${{inputs.app_ghcr_username}} --password ${{inputs.app_ghcr_pat}} --name ghcr-private-registry
+          argocd repo add https://ghcr.io/mcn-cqen/ceai-cqen-labinfra-fournisseur-identite --username ${{inputs.app_ghcr_username}} --password ${{inputs.app_ghcr_pat}}
           # list registered repos to confirm connection successful
           echo "Liste de repos registrés pour confirmer la connexion"
           argocd repo list
