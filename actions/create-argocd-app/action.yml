@@ -88,23 +88,22 @@ runs:
         # Si le repo est déjà présent, ne rien faire
         if argocd repo list | grep -q "${{ inputs.app_manifest_repo }}"; then
           echo "Le repo est déjà enregistré dans Argo CD, on skip."
-          exit 0
+        else
+          # Écrire la clé privée dans un fichier temporaire
+          PRIVATE_KEY_FILE="$(mktemp)"
+          printf '%s' "${{ inputs.github_app_private_key }}" > "$PRIVATE_KEY_FILE"
+          chmod 600 "$PRIVATE_KEY_FILE"
+
+          echo "Ajout du repo dans Argo CD..."
+          argocd repo add "${{ inputs.app_manifest_repo }}" \
+            --github-app-id "${{ inputs.github_app_id }}" \
+            --github-app-installation-id "${{ inputs.github_app_installation_id }}" \
+            --github-app-private-key-path "$PRIVATE_KEY_FILE" \
+            --grpc-web \
+            --insecure
+
+          rm -f "$PRIVATE_KEY_FILE"
         fi
-
-        # Écrire la clé privée dans un fichier temporaire
-        PRIVATE_KEY_FILE="$(mktemp)"
-        printf '%s' "${{ inputs.github_app_private_key }}" > "$PRIVATE_KEY_FILE"
-        chmod 600 "$PRIVATE_KEY_FILE"
-
-        echo "Ajout du repo dans Argo CD..."
-        argocd repo add "${{ inputs.app_manifest_repo }}" \
-          --github-app-id "${{ inputs.github_app_id }}" \
-          --github-app-installation-id "${{ inputs.github_app_installation_id }}" \
-          --github-app-private-key-path "$PRIVATE_KEY_FILE" \
-          --grpc-web \
-          --insecure
-
-        rm -f "$PRIVATE_KEY_FILE"
 
     - name: Check si le projet Argo CD existe
       id: check_project
