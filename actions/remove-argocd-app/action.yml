@@ -1,5 +1,5 @@
 name: "Desinstaller une application dans ArgoCD"
-description: "créer une application dans ArgoCD si elle n'existe pas"
+description: "Desinstaller une application dans ArgoCD si elle existe"
 
 inputs:
   argocd_server:
