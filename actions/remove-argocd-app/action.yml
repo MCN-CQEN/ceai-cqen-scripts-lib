@@ -15,7 +15,7 @@ inputs:
     description: "'Mot de passe de l'utilisateur Argo CD"
     required: true
   app_project_name:
-    description: "Le nom du projet où l'application sera déployée"
+    description: "Le nom du projet où l'application est déployée"
     required: true
   app_name:
     description: "Le nom de l'application"
