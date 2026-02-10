@@ -1,4 +1,4 @@
-name: "créer une application dans ArgoCD"
+name: "Desinstaller une application dans ArgoCD"
 description: "créer une application dans ArgoCD si elle n'existe pas"
 
 inputs:
