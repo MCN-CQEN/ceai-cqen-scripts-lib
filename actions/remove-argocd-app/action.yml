@@ -23,18 +23,6 @@ inputs:
   app_dest_namespace: 
     description: "Espace de destination du projet Argo CD"
     default: "defaultApp"
-  app_manifest_repo:
-    description: "URL du dépôt Git pour le manifeste de l'application"
-    required: true
-  app_manifest_repo_branch:
-    description: "Récupérer la branche du dépôt Git pour le manifeste de l'application"
-    default: "main"
-  app_manifest_path:
-    description: "Chemin du manifeste de l'application"
-    required: true
-  helm_params:
-    description: 'La liste de parametres helm avec le format "key1=val1,key2=val2"'
-    default: ''
 
 runs:
   using: "composite"
