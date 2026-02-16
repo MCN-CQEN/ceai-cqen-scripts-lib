@@ -37,8 +37,7 @@ inputs:
     default: ''
   private_repo:
     description: 'Le repo précise si le repo est privé ou public'
-    default: 'true'
-    required: true
+    default: 'false'
   github_app_id:
     description: "GitHub App ID pour accéder au repo privé"
     required: false
