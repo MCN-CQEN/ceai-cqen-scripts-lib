@@ -1,122 +1,238 @@
-# GitHub Action — Créer une application dans ArgoCD
-
-Cette GitHub Action permet d’automatiser la création d’une application Argo CD si elle n’existe pas déjà.
-
-Elle installe l’CLI ArgoCD si nécessaire, se connecte au serveur, vérifie l’existence du projet, crée l’application, ajoute les paramètres Helm éventuels, puis attend que l’application soit Healthy.
-
-## Table des matières
-
-- [Introduction](./README.md#introduction)
-- [Fonctionnalités](./README.md#fonctionnalités)
-- [Entrées (inputs)](./README.md#entrées-inputs)
-- [Comportement général](./README.md#comportement-général)
-- [Utilisation](./README.md#utilisation)
-- [Exemple de workflow](./README.md#exemple-avec-paramètres-helm)
-- [Dépendances](./README.md#dépendances)
-- [Troubleshooting](./README.md#troubleshooting)
+# GitHub Action – Créer une application dans ArgoCD
 
 ## Introduction
 
-Cette action GitHub automatise la gestion d’applications ArgoCD dans un contexte CI/CD.
+Cette GitHub Action composite permet de **créer automatiquement une application dans Argo CD si elle n’existe pas déjà**.
+
 Elle :
 
-- installe et configure le CLI ArgoCD si nécessaire ;
-- se connecte à Argo CD via utilisateur/mot de passe ;
-- vérifie que le projet existe (sinon interrompt proprement) ;
-- crée l’application ArgoCD si elle n'existe pas ;
-- applique les paramètres Helm fournis sous forme key=value ;
-- attend que l’application soit Healthy avant de terminer le job.
+* Installe la CLI si nécessaire
+* Se connecte au serveur Argo CD
+* Ajoute un dépôt Git privé (via GitHub App) si requis
+* Vérifie l’existence du projet Argo CD
+* Crée l’application si absente
+* Attend que l’application soit en état *Healthy*
 
-## Fonctionnalités
+Technologies utilisées :
 
-- 🚀 Installation automatique de l’ArgoCD CLI
-- 🔑 Authentification simple via username / password
-- 📁 Vérification de l’existence du projet ArgoCD
-- 🏗️ Création conditionnelle d’une application ArgoCD
-- ⚙️ Support des paramètres Helm (key=val)
-- ⏳ Validation de la santé de l’application (argocd app wait)
-- 🛑 Sort proprement si le projet ArgoCD n’existe pas
-- Compatible ArgoCD >= v2.x
+* Argo CD
+* GitHub Actions
+* Kubernetes
 
-## Entrées (inputs)
+---
 
-| Nom | Description | Obligatoire | Valeur par défaut |
-|------|--------|---------|---------|
-|argocd_server|URL du serveur ArgoCD|✅|—|
-|argocd_version|Version du CLI ArgoCD à installer (même version que ArgoCD de travail)|❗|v2.10.20|
-|argocd_username|Nom d’utilisateur ArgoCD|❗|admin|
-|argocd_password|Mot de passe ArgoCD|✅|-|
-|app_project_name|Projet ArgoCD où créer l’application. Le projet devrait déjà exister, si non, le workflow ne continue pas.|✅|—|
-|app_name|Nom de l’application ArgoCD|✅|—|
-|app_dest_namespace|Namespace cible sur Kubernetes|❗|argocd|
-|app_manifest_repo|Repo Git contenant les manifests Helm/Kustomize|✅|—|
-|app_manifest_repo_branch|CBranche du repo|❗|main|
-|app_manifest_path|Chemin dans le repo vers les manifests|✅|—|
-|helm_params|Paramètres Helm au format "key1=val1,key2=val2"|❗|vide|
+## Table des matières
 
-## Comportement général
+* [Vue d’ensemble](#vue-densemble)
+* [Fonctionnement](#fonctionnement)
+* [Inputs](#inputs)
+* [Workflow interne](#workflow-interne)
+* [Exemple d’utilisation](#exemple-dutilisation)
+* [Gestion des dépôts privés](#gestion-des-dépôts-privés)
+* [Bonnes pratiques sécurité](#bonnes-pratiques-sécurité)
+* [Dépannage](#dépannage)
 
-1. Installe le CLI ArgoCD si absent.
-2. Se connecte au serveur Argo CD via username/password.
-3. Vérifie si le projet ArgoCD existe.
-4. Si le projet n'existe pas, le workflow s'arrête proprement.
-5. Vérifie si l’application existe.
-6. Si elle n'existe pas:
-    - construit la commande `argocd app create`
-    - applique les paramètres helm si fournis
-    - crée l’application
-7. Attend que l’application devienne Healthy.
+---
 
-## Utilisation
+## Vue d’ensemble
 
-Voici un exemple minimal :
+Nom de l’action :
+
+```
+créer une application dans ArgoCD
+```
+
+Description :
+
+```
+créer une application dans ArgoCD si elle n'existe pas
+```
+
+Cette action est de type **composite** et exécute une série d’étapes Bash pour automatiser la gestion d’applications Argo CD.
+
+---
+
+## Fonctionnement
+
+L’action suit la logique suivante :
+
+1. Vérifier si la CLI Argo CD est installée
+2. Installer la CLI si nécessaire
+3. Se connecter au serveur Argo CD
+4. Ajouter le dépôt Git (si privé)
+5. Vérifier que le projet Argo CD existe
+6. Créer l’application si elle n’existe pas
+7. Attendre que l’application soit *Healthy*
+
+---
+
+## Inputs
+
+| Input                        | Requis | Description                             |
+| ---------------------------- | ------ | --------------------------------------- |
+| `argocd_server`              | ✅      | URL du serveur Argo CD                  |
+| `argocd_version`             | ❌      | Version CLI Argo CD (défaut: v2.10.20)  |
+| `argocd_username`            | ❌      | Username (défaut: admin)                |
+| `argocd_password`            | ✅      | Mot de passe Argo CD                    |
+| `app_project_name`           | ✅      | Nom du projet Argo CD                   |
+| `app_name`                   | ✅      | Nom de l’application                    |
+| `app_dest_namespace`         | ❌      | Namespace cible (défaut: defaultApp)    |
+| `app_manifest_repo`          | ✅      | URL du repo Git                         |
+| `app_manifest_repo_branch`   | ❌      | Branche (défaut: main)                  |
+| `app_manifest_path`          | ✅      | Chemin du manifeste                     |
+| `helm_params`                | ❌      | Paramètres Helm (`key1=val1,key2=val2`) |
+| `private_repo`               | ❌      | Indique si le repo est privé            |
+| `github_app_id`              | ❌      | GitHub App ID                           |
+| `github_app_installation_id` | ❌      | GitHub App Installation ID              |
+| `github_app_private_key`     | ❌      | Clé privée GitHub App                   |
+
+---
+
+## Workflow interne
+
+### 1️⃣ Installation CLI
+
+Vérifie la présence de `argocd`.
+Si absente → téléchargement depuis GitHub Releases.
+
+---
+
+### 2️⃣ Login Argo CD
+
+```bash
+argocd login <server> --username <user> --password <pass> --grpc-web --insecure
+```
+
+---
+
+### 3️⃣ Gestion repo privé (GitHub App)
+
+Si `private_repo=true` :
+
+* Vérifie la présence des credentials GitHub App
+* Ajoute le repo si absent
+* Ignore si déjà enregistré
+
+---
+
+### 4️⃣ Vérification du projet
+
+```bash
+argocd proj get <project>
+```
+
+Si le projet n’existe pas → arrêt du workflow.
+
+---
+
+### 5️⃣ Création conditionnelle de l’application
+
+Si l’application n’existe pas :
+
+```bash
+argocd app create ...
+```
+
+Options appliquées :
+
+* `--sync-policy automated`
+* `--sync-option CreateNamespace=true`
+* `--dest-server https://kubernetes.default.svc`
+
+---
+
+### 6️⃣ Attente du statut Healthy
+
+```bash
+argocd app wait <app> --health --timeout 300
+```
+
+---
+
+## Exemple d’utilisation
+
 ```yaml
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Create ArgoCD App
-        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/create-argocd-app@main
+      - name: Créer application ArgoCD
+        uses: ./github-actions/create-argocd-app
         with:
-          argocd_server: argocd.example.com
-          argocd_username: ${{ secrets.ARGOCD_USERNAME }}
-          argocd_password: ${{ secrets.ARGOCD_ADMIN_PASSWORD }}          
-          app_project_name: demo-project
-          app_name: demo-app
-          app_manifest_repo: https://github.com/myorg/myrepo.git
-          app_manifest_path: charts/demo
+          argocd_server: https://argocd.example.com
+          argocd_password: ${{ secrets.ARGOCD_PASSWORD }}
+          app_project_name: base
+          app_name: my-app
+          app_manifest_repo: https://github.com/org/repo.git
+          app_manifest_path: charts/my-app
 ```
 
-## Exemple avec paramètres Helm
+---
+
+## Gestion des dépôts privés
+
+Si le repo est privé :
 
 ```yaml
-helm_params: "image.tag=1.2.3,replicaCount=2"
-````
+private_repo: "true"
+github_app_id: ${{ secrets.GH_APP_ID }}
+github_app_installation_id: ${{ secrets.GH_APP_INSTALLATION_ID }}
+github_app_private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+```
 
-## Dépendances
+L’action :
 
-- ArgoCD CLI
-    - installé automatiquement si absent
-- Accès réseau au serveur Argo CD
-- Identifiants ArgoCD fonctionnels
-- Éventuellement : GitOps repo public ou privé
+* Vérifie si le repo est déjà enregistré
+* Ajoute le repo via GitHub App
+* Stocke temporairement la clé privée
 
-## Troubleshooting
+---
 
-❌ Login échoue
+## Bonnes pratiques sécurité
 
-    Vérifier l’URL (HTTPS requis)
-    Vérifier --grpc-web et --insecure selon la configuration de votre API server
-    Vérifier le mot de passe fourni
-   
-❌ "project does not exist, exit workflow" 
-    
-    Le projet ArgoCD n’a pas été créé par l’administrateur.
+* Utiliser des **GitHub Secrets**
+* Éviter `--insecure` en production si possible
+* Restreindre les permissions Argo CD
+* Ne jamais exposer la clé privée GitHub App en clair
+* Limiter l’accès admin Argo CD
 
-❌ L’application ne devient jamais Healthy
+---
 
-    Augmente le timeout ou vérifie les resources Kubernetes.
+## Dépannage
+
+### ❌ Erreur login Argo CD
+
+* Vérifier l’URL
+* Vérifier les credentials
+* Vérifier l’accessibilité réseau
+
+### ❌ Projet inexistant
+
+Le workflow s’arrête volontairement.
+Créer le projet via :
+
+```bash
+argocd proj create <project>
+```
+
+### ❌ Application stuck en Progressing
+
+Vérifier :
+
+```bash
+argocd app get <app>
+kubectl get pods -n <namespace>
+```
+
+---
+
+## Fonctionnalités principales
+
+* Idempotent (ne recrée pas si existe)
+* Support repo privé via GitHub App
+* Sync automatique
+* Attente du statut Healthy
+* Paramétrage Helm dynamique
+
