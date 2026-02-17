@@ -123,20 +123,20 @@ runs:
             --sync-policy automated \
             --grpc-web --insecure"
 
-          # Ajout des Sync Options
-          IFS=',' read -ra ADDR <<< "${{ inputs.sync_options }}"
-          for opt in "${ADDR[@]}"; do
+          IFS=',' read -ra S_OPTS <<< "${{ inputs.sync_options }}"
+          for opt in "${S_OPTS[@]}"; do
             CMD="$CMD --sync-option $opt"
           done
 
-          # Ajout des Helm Parameteres
           if [ -n "${{ inputs.helm_params }}" ]; then
-            CMD="$CMD --parameter ${{ inputs.helm_params }}"
+            IFS=',' read -ra H_PARAMS <<< "${{ inputs.helm_params }}"
+            for param in "${H_PARAMS[@]}"; do
+              CMD="$CMD --helm-set $param"
+            done
           fi
 
-          # Ajout des Helm Value Files
-          IFS=',' read -ra VFILES <<< "${{ inputs.helm_value_files }}"
-          for vfile in "${VFILES[@]}"; do
+          IFS=',' read -ra V_FILES <<< "${{ inputs.helm_value_files }}"
+          for vfile in "${V_FILES[@]}"; do
             CMD="$CMD --values $vfile"
           done
 
