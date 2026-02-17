@@ -148,14 +148,24 @@ runs:
 
     - name: Appliquer les correctifs (IgnoreDifferences & SyncOptions)
       shell: bash
+      env:
+        IGNORE_DATA: ${{ inputs.ignore_differences }}
       run: |
-        # On utilise Patch pour les structures complexes que 'create' gère mal via CLI
-        # 1. Mise à jour de ignoreDifferences si fourni
-        if [ "${{ inputs.ignore_differences }}" != "[]" ]; then
-          echo "Application du patch ignoreDifferences..."
+        if [ "$IGNORE_DATA" != "[]" ] && [ -n "$IGNORE_DATA" ]; then
+          echo "Construction du fichier de patch..."
+          
+          # On crée un objet JSON valide dans un fichier
+          # L'utilisation de la variable d'env empêche le shell d'interpréter les quotes internes
+          echo "{\"spec\": {\"ignoreDifferences\": $IGNORE_DATA}}" > patch.json
+          
+          echo "Contenu du patch généré :"
+          cat patch.json
+          
+          echo "Application du patch via ArgoCD..."
           argocd app patch ${{ inputs.app_name }} \
-            --patch "{\"spec\": {\"ignoreDifferences\": ${{ inputs.ignore_differences }} }}" \
-            --type merge --grpc-web --insecure
+            --patch "$(cat patch.json)" \
+            --type merge \
+            --grpc-web --insecure
         fi
 
     - name: Assert Argo CD Application Health
