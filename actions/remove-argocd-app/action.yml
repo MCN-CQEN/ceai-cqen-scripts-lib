@@ -50,22 +50,20 @@ runs:
 
         echo "Connexion au serveur Argo CD : ${{ inputs.argocd_server }}"
 
-        if ! argocd login "${{ inputs.argocd_server }}" \
-          --username "${{ inputs.argocd_username }}" \
-          --password "${{ inputs.argocd_password }}" \
-          --grpc-web \
-          --insecure; 
-        then
-            echo "ERREUR : Impossible de se connecter à Argo CD."
-            echo "Causes possibles :"
-            echo "   - serveur Argo CD éteint"
-            echo "   - URL incorrecte"
-            echo "   - problème réseau"
-            echo "   - le cluster n’existe pas"
-            exit 1
+        argocd login "${{ inputs.argocd_server }}" --username "${{ inputs.argocd_username }}" --password "${{ inputs.argocd_password }}" --grpc-web --insecure
+        # Capture the exit code of the last command
+        if [ $? -ne 0 ]; then
+          echo "ArgoCD login failed."
+          echo "ERREUR : Impossible de se connecter à Argo CD."
+          echo "Causes possibles :"
+          echo "   - serveur Argo CD éteint"
+          echo "   - URL incorrecte"
+          echo "   - problème réseau"
+          echo "   - le cluster n’existe pas"
+          exit 1          
+        else
+          echo "Connexion Argo CD réussie"
         fi
-
-        echo "Connexion Argo CD réussie"
 
     - name: Check si le projet Argo CD existe
       id: check_project
