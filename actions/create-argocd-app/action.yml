@@ -150,7 +150,8 @@ runs:
             --project ${{ inputs.app_project_name }} \
             --sync-policy automated \
             --grpc-web \
-            --insecure"
+            --insecure \
+            --upsert"
 
           IFS=',' read -ra S_OPTS <<< "${{ inputs.sync_options }}"
           for opt in "${S_OPTS[@]}"; do
