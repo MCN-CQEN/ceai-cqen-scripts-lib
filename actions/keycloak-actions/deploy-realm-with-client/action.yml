@@ -1,0 +1,259 @@
+name: 'Deploy Keycloak Realm with client'
+description: 'Crée ou met à jour un realm Keycloak avec un service account pour la gestion des clients'
+
+inputs:
+  keycloak_url:
+    description: 'URL du serveur Keycloak'
+    required: true
+  admin_token:
+    description: 'Token admin Keycloak (bearer token)'
+    required: true
+  realm_name:
+    description: 'Nom du realm à créer'
+    required: true
+  realm_display_name:
+    description: 'Nom affiché du realm'
+    required: false
+    default: ''
+  create_service_account:
+    description: 'Créer un service account pour gérer les clients'
+    required: false
+    default: 'true'
+  service_account_client_id:
+    description: 'Client ID du service account'
+    required: false
+    default: ''
+  templates_path:
+    description: 'Chemin vers les templates JSON'
+    required: false
+    default: 'keycloak/templates'
+
+outputs:
+  realm_created:
+    description: 'Le realm a été créé (true) ou mis à jour (false)'
+    value: ${{ steps.deploy-realm.outputs.created }}
+  service_account_client_id:
+    description: 'Client ID du service account créé'
+    value: ${{ steps.create-service-account.outputs.client_id }}
+  service_account_secret:
+    description: 'Secret du service account (à stocker de façon sécurisée)'
+    value: ${{ steps.get-secret.outputs.secret }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.keycloak_url }}" ]; then
+          echo "❌ keycloak_url est requis"
+          exit 1
+        fi
+        if [ -z "${{ inputs.admin_token }}" ]; then
+          echo "❌ admin_token est requis"
+          exit 1
+        fi
+        if [ -z "${{ inputs.realm_name }}" ]; then
+          echo "❌ realm_name est requis"
+          exit 1
+        fi
+        echo "✅ Inputs validés"
+
+    - name: Set variables
+      id: vars
+      shell: bash
+      run: |
+        DISPLAY_NAME="${{ inputs.realm_display_name }}"
+        if [ -z "$DISPLAY_NAME" ]; then
+          DISPLAY_NAME="Realm ${{ inputs.realm_name }}"
+        fi
+        echo "display_name=$DISPLAY_NAME" >> $GITHUB_OUTPUT
+        
+        SA_CLIENT_ID="${{ inputs.service_account_client_id }}"
+        if [ -z "$SA_CLIENT_ID" ]; then
+          SA_CLIENT_ID="sa-${{ inputs.realm_name }}-client-manager"
+        fi
+        echo "sa_client_id=$SA_CLIENT_ID" >> $GITHUB_OUTPUT
+
+    - name: Check if realm exists
+      id: check-realm
+      shell: bash
+      run: |
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+          "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}")
+        echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+    - name: Prepare realm configuration
+      shell: bash
+      run: |
+        TEMPLATE_PATH="${{ inputs.templates_path }}/realm-base.json"
+        
+        if [ -f "$TEMPLATE_PATH" ]; then
+          jq --arg realm "${{ inputs.realm_name }}" \
+             --arg displayName "${{ steps.vars.outputs.display_name }}" \
+             '.realm = $realm | .displayName = $displayName' \
+             "$TEMPLATE_PATH" > /tmp/realm-config.json
+        else
+          # Configuration minimale si pas de template
+          cat > /tmp/realm-config.json << EOF
+        {
+          "realm": "${{ inputs.realm_name }}",
+          "displayName": "${{ steps.vars.outputs.display_name }}",
+          "enabled": true,
+          "sslRequired": "external",
+          "registrationAllowed": false,
+          "loginWithEmailAllowed": true,
+          "verifyEmail": true,
+          "bruteForceProtected": true,
+          "eventsEnabled": true,
+          "adminEventsEnabled": true
+        }
+        EOF
+        fi
+
+    - name: Deploy realm
+      id: deploy-realm
+      shell: bash
+      run: |
+        if [ "${{ steps.check-realm.outputs.status }}" == "200" ]; then
+          echo "ℹ️ Mise à jour du realm existant..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
+            "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}" \
+            -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/realm-config.json)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          EXPECTED="204"
+          echo "created=false" >> $GITHUB_OUTPUT
+        else
+          echo "ℹ️ Création du nouveau realm..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ inputs.keycloak_url }}/admin/realms" \
+            -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/realm-config.json)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          EXPECTED="201"
+          echo "created=true" >> $GITHUB_OUTPUT
+        fi
+        
+        if [ "$HTTP_CODE" == "$EXPECTED" ]; then
+          echo "✅ Realm ${{ inputs.realm_name }} déployé"
+        else
+          echo "❌ Échec (HTTP $HTTP_CODE)"
+          echo "$RESPONSE"
+          exit 1
+        fi
+
+    - name: Create service account client
+      id: create-service-account
+      if: inputs.create_service_account == 'true'
+      shell: bash
+      run: |
+        CLIENT_ID="${{ steps.vars.outputs.sa_client_id }}"
+        TEMPLATE_PATH="${{ inputs.templates_path }}/service-client.json"
+        
+        if [ -f "$TEMPLATE_PATH" ]; then
+          jq --arg clientId "$CLIENT_ID" \
+             '.clientId = $clientId' \
+             "$TEMPLATE_PATH" > /tmp/service-client.json
+        else
+          cat > /tmp/service-client.json << EOF
+        {
+          "clientId": "$CLIENT_ID",
+          "name": "Service Account - Client Manager",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "serviceAccountsEnabled": true,
+          "publicClient": false,
+          "standardFlowEnabled": false,
+          "directAccessGrantsEnabled": false,
+          "protocol": "openid-connect"
+        }
+        EOF
+        fi
+        
+        # Vérifier si le client existe
+        EXISTING=$(curl -s \
+          -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+          "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/clients?clientId=$CLIENT_ID")
+        
+        CLIENT_UUID=$(echo "$EXISTING" | jq -r '.[0].id // empty')
+        
+        if [ -n "$CLIENT_UUID" ]; then
+          echo "ℹ️ Mise à jour du client existant..."
+          curl -s -X PUT \
+            "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/clients/$CLIENT_UUID" \
+            -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/service-client.json
+        else
+          echo "ℹ️ Création du nouveau client..."
+          curl -s -X POST \
+            "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/clients" \
+            -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/service-client.json
+          
+          EXISTING=$(curl -s \
+            -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+            "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/clients?clientId=$CLIENT_ID")
+          CLIENT_UUID=$(echo "$EXISTING" | jq -r '.[0].id')
+        fi
+        
+        echo "client_id=$CLIENT_ID" >> $GITHUB_OUTPUT
+        echo "client_uuid=$CLIENT_UUID" >> $GITHUB_OUTPUT
+        echo "✅ Service account client configuré (UUID: $CLIENT_UUID)"
+
+    - name: Assign roles to service account
+      if: inputs.create_service_account == 'true'
+      shell: bash
+      run: |
+        CLIENT_UUID="${{ steps.create-service-account.outputs.client_uuid }}"
+        
+        # Obtenir l'UUID de realm-management
+        REALM_MGMT=$(curl -s \
+          -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+          "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/clients?clientId=realm-management")
+        REALM_MGMT_UUID=$(echo "$REALM_MGMT" | jq -r '.[0].id')
+        
+        # Obtenir le service account user
+        SA_USER=$(curl -s \
+          -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+          "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/clients/$CLIENT_UUID/service-account-user")
+        SA_USER_ID=$(echo "$SA_USER" | jq -r '.id')
+        
+        # Lister et filtrer les rôles
+        AVAILABLE_ROLES=$(curl -s \
+          -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+          "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/clients/$REALM_MGMT_UUID/roles")
+        
+        ROLES_TO_ASSIGN=$(echo "$AVAILABLE_ROLES" | jq '[.[] | select(.name | test("view-clients|query-clients|manage-clients"))]')
+        
+        # Assigner les rôles
+        curl -s -X POST \
+          "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/users/$SA_USER_ID/role-mappings/clients/$REALM_MGMT_UUID" \
+          -H "Authorization: Bearer ${{ inputs.admin_token }}" \
+          -H "Content-Type: application/json" \
+          -d "$ROLES_TO_ASSIGN" || true
+        
+        echo "✅ Rôles assignés au service account"
+
+    - name: Get client secret
+      id: get-secret
+      if: inputs.create_service_account == 'true'
+      shell: bash
+      run: |
+        CLIENT_UUID="${{ steps.create-service-account.outputs.client_uuid }}"
+        
+        # Générer un nouveau secret
+        SECRET_RESPONSE=$(curl -s -X POST \
+          "${{ inputs.keycloak_url }}/admin/realms/${{ inputs.realm_name }}/clients/$CLIENT_UUID/client-secret" \
+          -H "Authorization: Bearer ${{ inputs.admin_token }}")
+        
+        CLIENT_SECRET=$(echo "$SECRET_RESPONSE" | jq -r '.value')
+        
+        echo "::add-mask::$CLIENT_SECRET"
+        echo "secret=$CLIENT_SECRET" >> $GITHUB_OUTPUT
+        echo "✅ Secret généré"
