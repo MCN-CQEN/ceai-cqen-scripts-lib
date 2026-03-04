@@ -96,7 +96,7 @@ runs:
 
         echo "Vérification de l'existence de l'application Argo CD : $APP_NAME"
 
-        if argocd app get "$APP_NAME" --app-namespace "$APP_NAMESPACE" &> /dev/null; then
+        if argocd app get "$APP_NAME" --app-namespace "$APP_NAMESPACE" > /dev/null 2>&1; then
           echo "Application '$APP_NAME' trouvée. Suppression en cours ..."
           argocd app delete "$APP_NAME" \
             --app-namespace "$APP_NAMESPACE" \
