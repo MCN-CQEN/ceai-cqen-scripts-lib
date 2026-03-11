@@ -1,0 +1,39 @@
+name: Associer un WAF aux ALBs par tag
+description: |
+  Exemple d'appel à l'action d'association d'un Web ACL WAF à des ALBs filtrés par tag.
+  Requis:
+    - Un Web ACL WAF doit être créé préalablement dans AWS.
+    - Les ALBs cibles doivent posséder le tag spécifié.
+    - Cet exemple utilise les secrets et les variables d'environnement du dépôt.
+
+on:
+  push:
+    branches:
+      - main
+
+# Permissions requises pour l'authentification OIDC avec AWS
+permissions:
+  id-token: write   # Requis pour obtenir le JWT OIDC
+  contents: read    # Requis pour actions/checkout
+
+jobs:
+  associate-waf:
+    runs-on: ubuntu-latest
+    name: Associer le WAF aux ALBs ciblés par tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurer les credentials AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ca-central-1
+
+      - name: Associer le WAF aux ALBs par tag
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/associate-waf@main
+        with:
+          web_acl_arn: ${{ secrets.WAF_ARN }}
+          tag_key: ${{ vars.WAF_TAG_KEY }}
+          tag_value: ${{ vars.WAF_TAG_VALUE }}
+          aws_region: "ca-central-1"

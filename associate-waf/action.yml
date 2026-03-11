@@ -1,0 +1,71 @@
+name: 'AWS WAF ALB Associator'
+description: |
+  Associe un Web ACL WAF à tous les Application Load Balancers (ALB)
+  correspondant à un tag spécifié.
+  Requis:
+    - Les credentials AWS doivent être configurés avant l'appel à cette action
+      (ex: aws-actions/configure-aws-credentials).
+    - Le rôle AWS utilisé doit avoir les permissions:
+        wafv2:AssociateWebACL
+        elasticloadbalancing:DescribeLoadBalancers
+        elasticloadbalancing:DescribeTags
+
+inputs:
+  web_acl_arn:
+    description: 'ARN du Web ACL WAF à associer aux ALBs'
+    required: true
+  tag_key:
+    description: 'Clé du tag utilisé pour identifier les ALBs cibles'
+    required: true
+  tag_value:
+    description: 'Valeur du tag utilisé pour identifier les ALBs cibles'
+    required: true
+  aws_region:
+    description: 'Région AWS où se trouvent les ressources'
+    required: false
+    default: 'ca-central-1'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Associer le WAF aux ALBs ciblés par tag
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        echo "Recherche des ALBs avec le tag ${{ inputs.tag_key }}=${{ inputs.tag_value }} dans la région ${{ inputs.aws_region }}..."
+
+        # Récupérer les ARNs de tous les ALBs de la région
+        ALL_ALB_ARNS=$(aws elbv2 describe-load-balancers \
+          --region "${{ inputs.aws_region }}" \
+          --query 'LoadBalancers[*].LoadBalancerArn' \
+          --output text)
+
+        if [ -z "$ALL_ALB_ARNS" ]; then
+          echo "Aucun ALB trouvé dans la région ${{ inputs.aws_region }}."
+          exit 0
+        fi
+
+        # Filtrer les ALBs qui possèdent le tag recherché
+        MATCHING_ARNS=$(aws elbv2 describe-tags \
+          --region "${{ inputs.aws_region }}" \
+          --resource-arns $ALL_ALB_ARNS \
+          --query "TagDescriptions[?Tags[?Key=='${{ inputs.tag_key }}' && Value=='${{ inputs.tag_value }}']].ResourceArn" \
+          --output text)
+
+        if [ -z "$MATCHING_ARNS" ]; then
+          echo "Aucun ALB trouvé avec le tag ${{ inputs.tag_key }}=${{ inputs.tag_value }}."
+          exit 0
+        fi
+
+        # Associer le WAF à chaque ALB correspondant
+        for ALB_ARN in $MATCHING_ARNS; do
+          echo "Association du WAF à l'ALB: $ALB_ARN..."
+          aws wafv2 associate-web-acl \
+            --web-acl-arn "${{ inputs.web_acl_arn }}" \
+            --resource-arn "$ALB_ARN" \
+            --region "${{ inputs.aws_region }}"
+          echo "Association réussie pour $ALB_ARN."
+        done
+
+        echo "Toutes les associations sont complétées."
