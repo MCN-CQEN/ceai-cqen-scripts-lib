@@ -97,6 +97,7 @@ Pour la création d'un script:
 |Infra validate tf|Valide le code Terraform|[Readme](./infra-validate-tf/README.md)|[action](./infra-validate-tf/action.yml)|
 |Login S3|Enregistre les logs des tests et des déploiements dans un bucket Amazon S3|[Readme](./logging-s3/README.md)|[action](./logging-s3/action.yml)|
 |Publish image to registry| Publie une image au registre des conteneurs d'images | [Readme](./publish-image-to-registry/README.md) | [action](./publish-image-to-registry/action.yml)|
+|Associate WAF | Associe un Web ACL WAF à tous les Application Load Balancers (ALB) d'une région AWS. | [Readme](./associate-waf/README.md) | [action](./associate-waf/action.yml) |
 
 
 ## Références

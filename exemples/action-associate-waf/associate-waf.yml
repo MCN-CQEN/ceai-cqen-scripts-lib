@@ -1,0 +1,36 @@
+name: Associer un WAF à tous les ALBs
+description: |
+  Exemple d'appel à l'action d'association d'un Web ACL WAF à tous les ALBs de la région.
+  Requis:
+    - Un Web ACL WAF doit être créé préalablement dans AWS.
+    - Cet exemple utilise les secrets et les variables d'environnement du dépôt.
+
+on:
+  push:
+    branches:
+      - main
+
+# Permissions requises pour l'authentification OIDC avec AWS
+permissions:
+  id-token: write   # Requis pour obtenir le JWT OIDC
+  contents: read    # Requis pour actions/checkout
+
+jobs:
+  associate-waf:
+    runs-on: ubuntu-latest
+    name: Associer le WAF à tous les ALBs de la région
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurer les credentials AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ca-central-1
+
+      - name: Associer le WAF à tous les ALBs
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/associate-waf@main
+        with:
+          web_acl_arn: ${{ secrets.WAF_ARN }}
+          aws_region: "ca-central-1"
