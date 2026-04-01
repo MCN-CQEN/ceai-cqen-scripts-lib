@@ -1,0 +1,51 @@
+name: 'AWS WAF ALB Associator'
+description: |
+  Associe un Web ACL WAF à tous les Application Load Balancers (ALB) de la région.
+  Requis:
+    - Les credentials AWS doivent être configurés avant l'appel à cette action
+      (ex: aws-actions/configure-aws-credentials).
+    - Le rôle AWS utilisé doit avoir les permissions:
+        wafv2:AssociateWebACL
+        elasticloadbalancing:DescribeLoadBalancers
+
+inputs:
+  web_acl_arn:
+    description: 'ARN du Web ACL WAF à associer aux ALBs'
+    required: true
+  aws_region:
+    description: 'Région AWS où se trouvent les ressources'
+    required: false
+    default: 'ca-central-1'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Associer le WAF à tous les ALBs de la région
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        echo "Recherche de tous les ALBs dans la région ${{ inputs.aws_region }}..."
+
+        # Récupérer les ARNs de tous les ALBs de la région
+        ALL_ALB_ARNS=$(aws elbv2 describe-load-balancers \
+          --region "${{ inputs.aws_region }}" \
+          --query 'LoadBalancers[*].LoadBalancerArn' \
+          --output text)
+
+        if [ -z "$ALL_ALB_ARNS" ]; then
+          echo "Aucun ALB trouvé dans la région ${{ inputs.aws_region }}."
+          exit 0
+        fi
+
+        # Associer le WAF à chaque ALB
+        for ALB_ARN in $ALL_ALB_ARNS; do
+          echo "Association du WAF à l'ALB: $ALB_ARN..."
+          aws wafv2 associate-web-acl \
+            --web-acl-arn "${{ inputs.web_acl_arn }}" \
+            --resource-arn "$ALB_ARN" \
+            --region "${{ inputs.aws_region }}"
+          echo "Association réussie pour $ALB_ARN."
+        done
+
+        echo "Toutes les associations sont complétées."
