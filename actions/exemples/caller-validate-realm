@@ -1,0 +1,50 @@
+name: Validation quotidienne du Realm Keycloak
+
+on:
+  workflow_dispatch:  
+  pull_request:       
+    branches:
+      - main
+  schedule:
+    - cron: '0 10 * * *'   # Tous les jours à 6h00 (heure du Québec)
+env:
+  AWS_REGION : "ca-central-1"
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  validate-realm:
+    name: Exécution du composite de validation
+    runs-on: ubuntu-latest
+    environment: test
+
+    steps:
+      - name: "configure aws credentials"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Étape 1 — Télécharger le fichier à l’extérieur du répertoire du dépôt
+      - name: Télécharger le Realm depuis S3
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}   # Bucket venant des secrets contenant /realms/test.json
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/../realms
+          aws s3 cp s3://$S3_BUCKET/realms/test.json $GITHUB_WORKSPACE/../realms/test.json
+          echo "Fichier téléchargé : $GITHUB_WORKSPACE/../realms/test-deploiement.json"
+          ls -l $GITHUB_WORKSPACE/../realms
+          
+      # Étape 2 — Exécuter le composite en pointant vers le fichier externe
+      - name: Valider et tester le Realm Keycloak
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/keycloak-actions/validate-realm@feature/deployer_realms
+        with:
+          keycloak_url: ${{ secrets.KEYCLOAK_URL_TEST }}
+          keycloak_username: ${{ secrets.KEYCLOAK_ADMIN_USERNAME_TEST }}
+          keycloak_password: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD_TEST }}
+          keycloak_api_client_secret: ${{ secrets.KEYCLOAK_API_CLIENT_SECRET }}
+          # On référence le fichier à l’extérieur du dossier du dépôt
+          realm_to_deploy: ../realms/test.json
+          target_realm: mon-realm-deploiement
