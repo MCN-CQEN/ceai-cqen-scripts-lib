@@ -1,7 +1,3 @@
-Voici un README complet en Markdown pour votre action GitHub composite :
-
----
-
 # 📦 Vérifier la santé d'un Load Balancer AWS
 
 ## 📖 Introduction
