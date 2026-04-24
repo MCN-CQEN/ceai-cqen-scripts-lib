@@ -1,0 +1,46 @@
+name: Notify via AWS SES
+description: Envoie un courriel de notification via AWS SES. Les credentials AWS doivent être configurés dans le workflow appelant.
+
+inputs:
+  subject:
+    description: Sujet du courriel
+    required: true
+  body:
+    description: Corps du courriel (texte brut)
+    required: true
+  from_email:
+    description: Adresse expéditeur (doit être vérifiée dans SES)
+    required: true
+  to_email:
+    description: Adresse destinataire
+    required: true
+  region:
+    description: Région AWS SES
+    required: false
+    default: ca-central-1
+
+runs:
+  using: composite
+  steps:
+    - name: Envoyer le courriel via AWS SES
+      shell: bash
+      run: |
+        # jq construit le JSON proprement et gère tous les caractères spéciaux
+        jq -n \
+          --arg from "${{ inputs.from_email }}" \
+          --arg to   "${{ inputs.to_email }}" \
+          --arg subj "${{ inputs.subject }}" \
+          --arg body "${{ inputs.body }}" \
+          '{
+            Source: $from,
+            Destination: { ToAddresses: [$to] },
+            Message: {
+              Subject: { Data: $subj, Charset: "UTF-8" },
+              Body:    { Text: { Data: $body, Charset: "UTF-8" } }
+            }
+          }' > /tmp/ses-message.json
+
+        aws ses send-email \
+          --region "${{ inputs.region }}" \
+          --cli-input-json file:///tmp/ses-message.json
+        echo "Courriel envoyé via AWS SES"

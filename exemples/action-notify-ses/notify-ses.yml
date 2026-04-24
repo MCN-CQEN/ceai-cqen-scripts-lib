@@ -1,0 +1,81 @@
+name: Envoyer une notification par courriel via AWS SES
+description: |
+  Exemple d'appel à l'action d'envoi de courriel via AWS SES.
+  Montre également comment utiliser cette action en combinaison avec les actions
+  de vérification de santé (check-alb-health, check-nlb-target-health) pour
+  notifier l'équipe du résultat d'un déploiement.
+  Requis:
+    - Les credentials AWS doivent être configurés avant l'appel à cette action.
+    - L'adresse expéditrice doit être vérifiée dans AWS SES.
+    - Le rôle AWS doit avoir la permission : ses:SendEmail
+    - Cet exemple utilise les secrets et les variables d'environnement du dépôt.
+
+on:
+  workflow_dispatch: # Permet le déclenchement manuel pour les tests
+  push:
+    branches:
+      - main
+
+# Permissions requises pour l'authentification OIDC avec AWS
+permissions:
+  id-token: write   # Requis pour obtenir le JWT OIDC
+  contents: read    # Requis pour actions/checkout
+
+jobs:
+  deploy-and-notify:
+    runs-on: ubuntu-latest
+    name: Déployer et notifier par courriel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurer les credentials AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ca-central-1
+
+      # Exemple : vérification de l'ALB avant notification
+      - name: Vérifier la santé de l'ALB
+        id: alb_health
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/check-alb-health@main
+        with:
+          alb_dns: ${{ vars.ALB_DNS }}
+          path: /health
+          node_label: APP
+
+      # Notification en cas de succès
+      - name: Notifier le succès du déploiement
+        if: success()
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/notify-ses@main
+        with:
+          subject: "Déploiement réussi — ${{ github.repository }}"
+          body: |
+            Le déploiement sur la branche ${{ github.ref_name }} s'est terminé avec succès.
+
+            Dépôt     : ${{ github.repository }}
+            Branche   : ${{ github.ref_name }}
+            Commit    : ${{ github.sha }}
+            Déclenché par : ${{ github.actor }}
+          from_email: ${{ vars.SES_FROM_EMAIL }}
+          to_email: ${{ vars.SES_TO_EMAIL }}
+          region: ca-central-1
+
+      # Notification en cas d'échec
+      - name: Notifier l'échec du déploiement
+        if: failure()
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/notify-ses@main
+        with:
+          subject: "Échec du déploiement — ${{ github.repository }}"
+          body: |
+            Le déploiement sur la branche ${{ github.ref_name }} a échoué.
+
+            Dépôt     : ${{ github.repository }}
+            Branche   : ${{ github.ref_name }}
+            Commit    : ${{ github.sha }}
+            Déclenché par : ${{ github.actor }}
+
+            Consulter les logs : https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          from_email: ${{ vars.SES_FROM_EMAIL }}
+          to_email: ${{ vars.SES_TO_EMAIL }}
+          region: ca-central-1
