@@ -47,11 +47,11 @@
             echo "Obtention de l'ARN du load balancer à partir du DNS fourni: ${{ inputs.lb-dns }}"
             LB_ARN=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?DNSName=='$inputs.lb-dns'].LoadBalancerArn" --output text 2>/dev/null || echo "NOT_FOUND")
 
-            if [ "$ALB_ARN" == "NOT_FOUND" ] || [ -z "$ALB_ARN" ] || [ "$ALB_ARN" == "None" ]; then
+            if [ "$LB_ARN" == "NOT_FOUND" ] || [ -z "$LB_ARN" ] || [ "$LB_ARN" == "None" ]; then
               echo "Error: Load Balancer not found!"
               exit 1
             fi
-            echo "Found ALB: $ALB_ARN"
+            echo "Found LB: $LB_ARN"
           else
             LB_ARN="${{ inputs.lb-arn }}"
           fi
