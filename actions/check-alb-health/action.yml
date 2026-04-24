@@ -1,0 +1,63 @@
+name: Check ALB Health
+description: Vérifie la santé d'un ALB via une requête GET. Accepte HTTP 2xx/3xx/4xx comme réponse valide (401 = serveur actif mais non authentifié).
+
+inputs:
+  alb_dns:
+    description: DNS de l'ALB interne à vérifier
+    required: true
+  path:
+    description: Chemin HTTP à appeler (ex. /health, /api/v1/system/status)
+    required: true
+  node_label:
+    description: Nom du nœud pour les logs (ex. CS1, CS2)
+    required: false
+    default: CS
+  retries:
+    description: Nombre max de tentatives
+    required: false
+    default: '15'
+  interval:
+    description: Secondes entre chaque tentative
+    required: false
+    default: '30'
+
+outputs:
+  healthy:
+    description: true si l'ALB répond avec un code HTTP valide
+    value: ${{ steps.check.outputs.healthy }}
+
+runs:
+  using: composite
+  steps:
+    - name: Vérifier l'ALB
+      id: check
+      shell: bash
+      run: |
+        ALB_DNS="${{ inputs.alb_dns }}"
+        MAX_RETRIES="${{ inputs.retries }}"
+        INTERVAL="${{ inputs.interval }}"
+        LABEL="${{ inputs.node_label }}"
+        URL="https://${ALB_DNS}${{ inputs.path }}"
+        RESULT="false"
+
+        echo "ALB $LABEL : $URL"
+
+        for i in $(seq 1 "$MAX_RETRIES"); do
+          HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" \
+            --max-time 15 --connect-timeout 5 "$URL" 2>/dev/null || echo "000")
+          echo "Tentative $i/$MAX_RETRIES — HTTP $HTTP_CODE"
+
+          if [[ "$HTTP_CODE" =~ ^[234][0-9][0-9]$ ]]; then
+            echo "ALB $LABEL HEALTHY (HTTP $HTTP_CODE)"
+            RESULT="true"
+            break
+          fi
+
+          [ "$i" -lt "$MAX_RETRIES" ] && sleep "$INTERVAL"
+        done
+
+        echo "healthy=$RESULT" >> $GITHUB_OUTPUT
+        if [ "$RESULT" != "true" ]; then
+          echo "::error::ALB $LABEL UNHEALTHY — aucune réponse valide après $MAX_RETRIES tentatives"
+          exit 1
+        fi

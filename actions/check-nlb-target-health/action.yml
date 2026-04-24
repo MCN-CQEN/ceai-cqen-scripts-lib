@@ -1,0 +1,90 @@
+name: Check NLB Target Health
+description: Vérifie la santé des targets d'un NLB via AWS elbv2. Les credentials AWS doivent être configurés dans le workflow appelant.
+
+inputs:
+  nlb_dns:
+    description: DNS du NLB à vérifier
+    required: true
+  node_label:
+    description: Nom du nœud pour les logs (ex. CS1, CS2)
+    required: false
+    default: CS
+  retries:
+    description: Nombre max de tentatives
+    required: false
+    default: '15'
+  interval:
+    description: Secondes entre chaque tentative
+    required: false
+    default: '30'
+  region:
+    required: false
+    default: ca-central-1
+
+outputs:
+  healthy:
+    description: true si tous les targets du NLB sont healthy
+    value: ${{ steps.check.outputs.healthy }}
+
+runs:
+  using: composite
+  steps:
+    - name: Vérifier les targets du NLB
+      id: check
+      shell: bash
+      run: |
+        NLB_DNS="${{ inputs.nlb_dns }}"
+        MAX_RETRIES="${{ inputs.retries }}"
+        INTERVAL="${{ inputs.interval }}"
+        REGION="${{ inputs.region }}"
+        LABEL="${{ inputs.node_label }}"
+        RESULT="false"
+
+        echo "Recherche du NLB $LABEL via DNS : $NLB_DNS"
+
+        for i in $(seq 1 "$MAX_RETRIES"); do
+          NLB_ARN=$(aws elbv2 describe-load-balancers \
+            --region "$REGION" \
+            --query "LoadBalancers[?DNSName=='${NLB_DNS}'].LoadBalancerArn" \
+            --output text 2>/dev/null)
+
+          if [ -z "$NLB_ARN" ]; then
+            echo "Tentative $i/$MAX_RETRIES — NLB $LABEL introuvable via DNS"
+            [ "$i" -lt "$MAX_RETRIES" ] && sleep "$INTERVAL"
+            continue
+          fi
+
+          TG_ARNS=$(aws elbv2 describe-target-groups \
+            --load-balancer-arn "$NLB_ARN" \
+            --region "$REGION" \
+            --query "TargetGroups[].TargetGroupArn" \
+            --output text 2>/dev/null)
+
+          ALL_HEALTHY="true"
+          for TG_ARN in $TG_ARNS; do
+            STATES=$(aws elbv2 describe-target-health \
+              --target-group-arn "$TG_ARN" \
+              --region "$REGION" \
+              --query "TargetHealthDescriptions[].TargetHealth.State" \
+              --output text 2>/dev/null)
+            echo "  Target group $(basename $TG_ARN) : $STATES"
+            if echo "$STATES" | grep -qvE "^healthy$"; then
+              ALL_HEALTHY="false"
+            fi
+          done
+
+          if [ "$ALL_HEALTHY" = "true" ]; then
+            echo "Tentative $i/$MAX_RETRIES — NLB $LABEL HEALTHY"
+            RESULT="true"
+            break
+          fi
+
+          echo "Tentative $i/$MAX_RETRIES — targets pas encore healthy"
+          [ "$i" -lt "$MAX_RETRIES" ] && sleep "$INTERVAL"
+        done
+
+        echo "healthy=$RESULT" >> $GITHUB_OUTPUT
+        if [ "$RESULT" != "true" ]; then
+          echo "::error::NLB $LABEL UNHEALTHY — targets non healthy après $MAX_RETRIES tentatives"
+          exit 1
+        fi

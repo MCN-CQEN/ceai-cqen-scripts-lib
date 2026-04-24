@@ -1,0 +1,38 @@
+name: Vérifier la santé d'un ALB
+description: |
+  Exemple d'appel à l'action de vérification de la santé d'un ALB via requête HTTP.
+  Accepte les codes HTTP 2xx, 3xx et 4xx comme réponse valide (un 401 indique
+  que le serveur est actif mais requiert une authentification).
+  Requis:
+    - Le DNS de l'ALB doit être accessible depuis le runner GitHub Actions.
+    - Cet exemple utilise les variables d'environnement du dépôt.
+
+on:
+  workflow_dispatch: # Permet le déclenchement manuel pour les tests
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check-alb-health:
+    runs-on: ubuntu-latest
+    name: Vérifier la santé de l'ALB
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Vérifier la santé de l'ALB
+        id: alb_health
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/check-alb-health@main
+        with:
+          alb_dns: ${{ vars.ALB_DNS }}
+          path: /health
+          node_label: APP
+          retries: '10'
+          interval: '20'
+
+      - name: Afficher le résultat
+        run: echo "ALB healthy = ${{ steps.alb_health.outputs.healthy }}"

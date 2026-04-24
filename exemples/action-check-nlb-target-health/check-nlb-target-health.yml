@@ -1,0 +1,50 @@
+name: Vérifier la santé des targets d'un NLB
+description: |
+  Exemple d'appel à l'action de vérification de la santé des targets d'un NLB via AWS elbv2.
+  L'action vérifie que tous les targets enregistrés dans les target groups du NLB
+  sont en état "healthy" avant de continuer le workflow.
+  Requis:
+    - Les credentials AWS doivent être configurés avant l'appel à cette action.
+    - Le rôle AWS doit avoir les permissions :
+        elasticloadbalancing:DescribeLoadBalancers
+        elasticloadbalancing:DescribeTargetGroups
+        elasticloadbalancing:DescribeTargetHealth
+    - Cet exemple utilise les secrets et les variables d'environnement du dépôt.
+
+on:
+  workflow_dispatch: # Permet le déclenchement manuel pour les tests
+  push:
+    branches:
+      - main
+
+# Permissions requises pour l'authentification OIDC avec AWS
+permissions:
+  id-token: write   # Requis pour obtenir le JWT OIDC
+  contents: read    # Requis pour actions/checkout
+
+jobs:
+  check-nlb-health:
+    runs-on: ubuntu-latest
+    name: Vérifier la santé des targets du NLB
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurer les credentials AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ca-central-1
+
+      - name: Vérifier la santé des targets du NLB
+        id: nlb_health
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/check-nlb-target-health@main
+        with:
+          nlb_dns: ${{ vars.NLB_DNS }}
+          node_label: APP
+          retries: '10'
+          interval: '20'
+          region: ca-central-1
+
+      - name: Afficher le résultat
+        run: echo "NLB healthy = ${{ steps.nlb_health.outputs.healthy }}"
