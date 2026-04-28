@@ -1,0 +1,84 @@
+  name: "Vérifier la santé de l'équilibreur de charge (load balancer) d'une application"
+  description: "Vérifier la santé du load balancer d'une application déployée sur AWS à partir du ARN ou de son nom DNS"
+
+  inputs:
+    lb-dns:
+      description: "Le nom du DNS du load balancer à vérifier"
+      type: string
+    lb-arn:
+      description: "L'ARN du load balancer à vérifier"
+      type: string
+    role_to_assume:
+      required: true
+      type: string    
+    aws_region:
+      required: true
+      type: string
+      default: "ca-central-1"
+
+  runs:
+    using: "composite"
+    steps:
+      
+      - name: Checkout code
+        uses: actions/checkout@v3   
+
+      - name: Configuration d'identifiants AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.role_to_assume }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ inputs.aws_region }}     
+
+      - name: Vérification des inputs identifiants du load balancer
+        shell: bash
+        run: |
+          # ARN du load balancer
+          if [ -z "${{ inputs.lb-arn }}" && -z "${{ inputs.lb-dns }}" ]; then
+            echo "Vous devez fournir au moins un de deux paramètres: 'lb-arn' ou 'lb-dns'"
+            exit 1
+          fi
+
+      - name: Check LB Target Health
+        shell: bash
+        run: |
+          # 1. Get Target Group ARNs
+          if [ -z "${{ inputs.lb-arn }}" ]; then
+            echo "Obtention de l'ARN du load balancer à partir du DNS fourni: ${{ inputs.lb-dns }}"
+            LB_ARN=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?DNSName=='${{inputs.lb-dns}}'].LoadBalancerArn" --output text 2>/dev/null || echo "NOT_FOUND")
+
+            if [ "$LB_ARN" == "NOT_FOUND" ] || [ -z "$LB_ARN" ] || [ "$LB_ARN" == "None" ]; then
+              echo "Error: Load Balancer not found!"
+              exit 1
+            fi
+            echo "Found LB: $LB_ARN"
+          else
+            LB_ARN="${{ inputs.lb-arn }}"
+          fi
+          
+          # Get TGs associated with the LB
+          TG_ARNS=$(aws elbv2 describe-target-groups --load-balancer-arn $LB_ARN --query "TargetGroups[*].TargetGroupArn" --output text)
+
+          # 2. Verify Target Health
+          for TG_ARN in $TG_ARNS; do
+            echo "Checking TG: $TG_ARN"
+            
+            # Get health states
+            HEALTHY_TARGETS=$(aws elbv2 describe-target-health \
+              --target-group-arn $TG_ARN \
+              --query "TargetHealthDescriptions[?TargetHealth.State=='healthy'].Target.Id" \
+              --output text)
+            
+            UNHEALTHY_TARGETS=$(aws elbv2 describe-target-health \
+              --target-group-arn $TG_ARN \
+              --query "TargetHealthDescriptions[?TargetHealth.State!='healthy'].TargetHealth.State" \
+              --output text)
+
+            if [ -n "$UNHEALTHY_TARGETS" ]; then
+              echo "::error::Unhealthy targets found in $TG_ARN: $UNHEALTHY_TARGETS"
+              exit 1
+            else
+              echo "All targets healthy in $TG_ARN"
+            fi
+          done
+
