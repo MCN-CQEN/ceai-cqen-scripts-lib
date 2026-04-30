@@ -1,0 +1,83 @@
+---
+- name: Show loaded variables for debug
+  ansible.builtin.debug:
+    msg:
+      identifier: "{{ identifier | default('UNDEFINED') }}"
+      engine: "{{ engine | default('UNDEFINED') }}"
+      aws_region: "{{ aws_region | default('UNDEFINED') }}"
+      env_suffix: "{{ env_suffix | default('UNDEFINED') }}"
+      db_host: "{{ db_host | default('UNDEFINED') }}"
+      db_port: "{{ db_port | default('UNDEFINED') }}"
+      db_master_user: "{{ 'SET' if (db_master_user | default('')) else 'UNDEFINED' }}"
+      db_master_password: "{{ 'SET' if (db_master_password | default('')) else 'UNDEFINED' }}"
+      apps_count: "{{ apps | default([]) | length }}"
+
+- name: Validate identifier
+  ansible.builtin.assert:
+    that:
+      - identifier is defined
+      - identifier | length > 0
+    fail_msg: "identifier is missing or empty"
+
+- name: Validate engine
+  ansible.builtin.assert:
+    that:
+      - engine is defined
+      - engine | length > 0
+    fail_msg: "engine is missing or empty"
+
+- name: Validate aws_region
+  ansible.builtin.assert:
+    that:
+      - aws_region is defined
+      - aws_region | length > 0
+    fail_msg: "aws_region is missing or empty"
+
+- name: Validate env_suffix
+  ansible.builtin.assert:
+    that:
+      - env_suffix is defined
+      - env_suffix | length > 0
+    fail_msg: "env_suffix is missing or empty"
+
+- name: Validate db_host
+  ansible.builtin.assert:
+    that:
+      - db_host is defined
+      - db_host | length > 0
+    fail_msg: "db_host is missing or empty"
+
+- name: Validate db_port
+  ansible.builtin.assert:
+    that:
+      - db_port is defined
+    fail_msg: "db_port is missing"
+
+- name: Validate db_master_user
+  ansible.builtin.assert:
+    that:
+      - db_master_user is defined
+      - db_master_user | length > 0
+    fail_msg: "db_master_user is missing or empty"
+
+- name: Validate db_master_password
+  ansible.builtin.assert:
+    that:
+      - db_master_password is defined
+      - db_master_password | length > 0
+    fail_msg: "db_master_password is missing or empty"
+
+- name: Validate apps
+  ansible.builtin.assert:
+    that:
+      - apps is defined
+      - apps | length > 0
+    fail_msg: "apps is missing or empty"
+
+- name: Validate db_roles
+  ansible.builtin.assert:
+    that:
+      - db_roles is defined
+      - db_roles.admin is defined
+      - db_roles.app is defined
+    fail_msg: "db_roles is missing or empty"

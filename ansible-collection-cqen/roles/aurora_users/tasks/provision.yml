@@ -1,0 +1,158 @@
+---
+- name: Build derived names for {{ app.name }}
+  ansible.builtin.set_fact:
+    app_name: "{{ app.name }}_{{ env_suffix }}"
+    db_name: "{{ app.name }}_{{ env_suffix }}_db"
+    admin_user: "{{ app.name }}_{{ env_suffix }}_admin"
+    user_name: "{{ app.name }}_{{ env_suffix }}_user"
+    secret_name: "{{ identifier }}-{{ engine }}-{{ app.name }}_{{ env_suffix }}-rds-users-secret"
+
+- name: Try to read existing secret for {{ app_name }}
+  ansible.builtin.set_fact:
+    existing_secret_raw: >-
+      {{ lookup(
+          'amazon.aws.secretsmanager_secret',
+          secret_name,
+          region=aws_region,
+          on_missing='skip'
+      ) }}
+
+- name: Set flag if secret exists for {{ app_name }}
+  ansible.builtin.set_fact:
+    secret_exists: "{{ (existing_secret_raw | default('')) | length > 0 }}"
+
+- name: Parse existing secret JSON for {{ app_name }}
+  ansible.builtin.set_fact:
+    existing_secret_json: "{{ existing_secret_raw | from_json }}"
+  when: secret_exists
+
+- name: Generate admin password only if secret does not exist
+  ansible.builtin.set_fact:
+    generated_admin_password: >-
+      {{ lookup(
+          'ansible.builtin.password',
+          '/tmp/' ~ identifier ~ '-' ~ engine ~ '-' ~ app_name ~ '-admin.password',
+          length=20,
+          chars=['ascii_letters', 'digits', '!', '?']
+      ) }}
+  when: not secret_exists
+
+- name: Generate user password only if secret does not exist
+  ansible.builtin.set_fact:
+    generated_user_password: >-
+      {{ lookup(
+          'ansible.builtin.password',
+          '/tmp/' ~ identifier ~ '-' ~ engine ~ '-' ~ app_name ~ '-user.password',
+          length=20,
+          chars=['ascii_letters', 'digits', '!', '?']
+      ) }}
+  when: not secret_exists
+
+- name: Set final passwords from existing secret or generated values
+  ansible.builtin.set_fact:
+    current_admin_password: "{{ existing_secret_json.DB_ADMIN_PASS if secret_exists else generated_admin_password }}"
+    current_user_password: "{{ existing_secret_json.DB_PASS if secret_exists else generated_user_password }}"
+
+- name: Create or update secret for {{ app_name }}
+  community.aws.secretsmanager_secret:
+    name: "{{ secret_name }}"
+    region: "{{ aws_region }}"
+    overwrite: true
+    json_secret:
+      DB_NAME: "{{ db_name }}"
+      DB_HOST: "{{ db_host }}"
+      DB_ADMIN: "{{ admin_user }}"
+      DB_ADMIN_PASS: "{{ current_admin_password }}"
+      DB_USER: "{{ user_name }}"
+      DB_PASS: "{{ current_user_password }}"
+    state: present
+
+- name: Create database for {{ app_name }}
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    state: present
+    conn_limit: "-1"
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+
+- name: Create admin role for {{ app_name }}
+  community.postgresql.postgresql_user:
+    name: "{{ admin_user }}"
+    password: "{{ current_admin_password }}"
+    role_attr_flags: "{{ db_roles.admin.flags | join(',') }}"
+    state: present
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    login_db: postgres
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+
+- name: Create app role for {{ app_name }}
+  community.postgresql.postgresql_user:
+    name: "{{ user_name }}"
+    password: "{{ current_user_password }}"
+    role_attr_flags: "{{ db_roles.app.flags | join(',') }}"
+    state: present
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    login_db: postgres
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+
+- name: Grant schema privileges to admin for {{ app_name }}
+  community.postgresql.postgresql_privs:
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    login_db: "{{ db_name }}"
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+    type: schema
+    objs: public
+    role: "{{ admin_user }}"
+    privs: "{{ db_roles.admin.schema_privileges | join(',') }}"
+    state: present
+
+- name: Grant table privileges on existing tables to app role for {{ app_name }}
+  community.postgresql.postgresql_privs:
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    login_db: "{{ db_name }}"
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+    type: table
+    objs: ALL_IN_SCHEMA
+    schema: public
+    role: "{{ user_name }}"
+    privs: "{{ db_roles.app.table_privileges | join(',') }}"
+    state: present
+
+- name: Grant default privileges on future tables to app role for {{ app_name }}
+  community.postgresql.postgresql_privs:
+    login_host: "{{ db_host }}"
+    login_port: "{{ db_port }}"
+    login_user: "{{ admin_user }}"
+    login_password: "{{ current_admin_password }}"
+    login_db: "{{ db_name }}"
+    ssl_mode: require
+    type: default_privs
+    objs: TABLES
+    schema: public
+    role: "{{ user_name }}"
+    target_roles: "{{ admin_user }}"
+    privs: "{{ db_roles.app.table_privileges | join(',') }}"
+    state: present
+
+- name: Show result for {{ app_name }}
+  ansible.builtin.debug:
+    msg:
+      - "App: {{ app_name }}"
+      - "Database: {{ db_name }}"
+      - "Secret: {{ secret_name }}"
+      - "Secret existed before run: {{ secret_exists }}"

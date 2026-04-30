@@ -1,0 +1,9 @@
+---
+- name: Validate variables
+  ansible.builtin.include_tasks: validate.yml
+
+- name: Process applications
+  ansible.builtin.include_tasks: provision.yml
+  loop: "{{ apps }}"
+  loop_control:
+    loop_var: app

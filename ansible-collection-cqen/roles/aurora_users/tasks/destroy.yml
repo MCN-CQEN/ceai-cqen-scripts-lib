@@ -1,0 +1,85 @@
+---
+- name: Build derived names for {{ app.name }}
+  ansible.builtin.set_fact:
+    app_name: "{{ app.name }}_{{ env_suffix }}"
+    db_name: "{{ app.name }}_{{ env_suffix }}_db"
+    admin_user: "{{ app.name }}_{{ env_suffix }}_admin"
+    user_name: "{{ app.name }}_{{ env_suffix }}_user"
+    secret_name: "{{ identifier }}-{{ engine }}-{{ app.name }}_{{ env_suffix }}-rds-users-secret"
+
+- name: Try to read existing secret for {{ app_name }}
+  ansible.builtin.set_fact:
+    existing_secret_raw: >-
+      {{ lookup(
+          'amazon.aws.secretsmanager_secret',
+          secret_name,
+          region=aws_region,
+          on_missing='skip'
+      ) }}
+
+- name: Set flag if secret exists for {{ app_name }}
+  ansible.builtin.set_fact:
+    secret_exists: "{{ (existing_secret_raw | default('')) | length > 0 }}"
+
+- name: Parse existing secret JSON for {{ app_name }}
+  ansible.builtin.set_fact:
+    existing_secret_json: "{{ existing_secret_raw | from_json }}"
+  when: secret_exists
+
+- name: Check if database exists for {{ app_name }}
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    state: present
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+  check_mode: true
+  register: db_check
+  failed_when: false
+
+- name: Set db_exists flag for {{ app_name }}
+  ansible.builtin.set_fact:
+    db_exists: "{{ not db_check.changed }}"
+
+- name: Drop database for {{ app_name }}
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    state: absent
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+
+- name: Drop app role for {{ app_name }}
+  community.postgresql.postgresql_user:
+    name: "{{ user_name }}"
+    state: absent
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    login_db: postgres
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+
+- name: Drop admin role for {{ app_name }}
+  community.postgresql.postgresql_user:
+    name: "{{ admin_user }}"
+    state: absent
+    login_host: "{{ pg_login.login_host }}"
+    login_port: "{{ pg_login.login_port }}"
+    login_user: "{{ pg_login.login_user }}"
+    login_password: "{{ pg_login.login_password }}"
+    login_db: postgres
+    ssl_mode: "{{ pg_login.ssl_mode }}"
+
+- name: Show result for {{ app_name }}
+  ansible.builtin.debug:
+    msg:
+      - "App: {{ app_name }}"
+      - "Database dropped: {{ db_name }}"
+      - "Users dropped: {{ admin_user }}, {{ user_name }}"
+      - "Secret conservé: {{ secret_name }}"
+      - "Secret existed before run: {{ secret_exists }}"
