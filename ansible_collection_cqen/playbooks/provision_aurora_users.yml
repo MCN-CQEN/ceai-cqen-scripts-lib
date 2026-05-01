@@ -16,9 +16,5 @@
       login_password: "{{ db_master_password }}"
       ssl_mode: require
 
-  vars_files:
-    - "group_vars/all.yml"
-    - "group_vars/apps.yml"
-
   roles:
     - aurora_users
