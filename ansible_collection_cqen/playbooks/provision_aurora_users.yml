@@ -8,7 +8,7 @@
     - mcn_cqen.infrastructure
 
   vars:
-    #ansible_python_interpreter: "{{ lookup('env', 'PYTHON_BIN') }}"
+    ansible_python_interpreter: "{{ lookup('env', 'ANSIBLE_PYTHON_INTERPRETER') }}"
     pg_login:
       login_host: "{{ db_host }}"
       login_port: "{{ db_port }}"
