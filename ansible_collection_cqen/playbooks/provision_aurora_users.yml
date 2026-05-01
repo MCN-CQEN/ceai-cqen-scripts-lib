@@ -5,7 +5,7 @@
   connection: local
 
   collections:
-    - mcn_cqen.infrastructure
+    - ceai.aurora
 
   vars:
     ansible_python_interpreter: "{{ lookup('env', 'ANSIBLE_PYTHON_INTERPRETER') }}"
@@ -18,3 +18,4 @@
 
   roles:
     - aurora_users
+    

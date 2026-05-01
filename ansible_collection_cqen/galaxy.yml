@@ -1,6 +1,6 @@
 ---
-namespace: mcn_cqen
-name: infrastructure
+namespace: ceai
+name: aurora
 version: 1.0.0
 readme: README.md
 authors:
