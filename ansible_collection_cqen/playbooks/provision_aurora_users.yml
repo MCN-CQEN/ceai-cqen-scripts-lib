@@ -1,7 +1,8 @@
 ---
 - name: Create or update Aurora PostgreSQL databases, users and secrets
-  hosts: local
+  hosts: localhost
   gather_facts: false
+  connection: local
 
   collections:
     - mcn_cqen.infrastructure
@@ -15,9 +16,10 @@
       login_password: "{{ db_master_password }}"
       ssl_mode: require
 
+  vars_files:
+    - "group_vars/all.yml"
+    - "group_vars/apps.yml"
+    - "group_vars/roles.yml"
+
   roles:
-    - role: aurora_users
-      vars_files:
-        - "group_vars/all.yml"
-        - "group_vars/apps.yml"
-        - "group_vars/roles.yml"
+    - aurora_users
