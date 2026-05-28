@@ -2,7 +2,7 @@
 
 ## Example 1: Using in GitHub Actions Workflow
 
-Your workflow 32 now installs and uses the Collection:
+Your workflow now installs and uses the Collection:
 
 ```yaml
 - name: Install Ansible and collection
