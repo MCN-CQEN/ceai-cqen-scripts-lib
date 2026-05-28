@@ -14,6 +14,7 @@ L'objectif est de fournir un point d'accès unique, versionné et documenté pou
 ## Contenu
 
 - [actions](./actions/README.md): Scripts communs et génériques pour GitHub Actions.
+- [ansible](./ansible): Collections Ansible pour l'automatisation et gestion des configurations.
 - [exemples](./exemples): Scripts qui montrent l'utilisation des scripts communs à partir d'un dépôt externe.
 
 ## License

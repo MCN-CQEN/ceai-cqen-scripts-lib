@@ -1,0 +1,26 @@
+---
+# Default database role configurations
+db_roles:
+  admin:
+    flags:
+      - LOGIN
+      - CREATEDB
+      - CREATEROLE
+    schema_privileges:
+      - CREATE
+      - USAGE
+
+  app:
+    flags:
+      - LOGIN
+    table_privileges:
+      - SELECT
+      - INSERT
+      - UPDATE
+      - DELETE
+      - TRUNCATE
+      - REFERENCES
+      - TRIGGER
+
+# Default apps list (can be overridden)
+apps: []

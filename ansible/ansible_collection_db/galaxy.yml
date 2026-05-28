@@ -1,0 +1,17 @@
+---
+namespace: ceai
+name: aurora
+version: 1.0.0
+readme: README.md
+authors:
+  - MCN-CQEN
+description: Ansible Collection for managing infrastructure provisioning (Aurora databases, users, RDS configurations)
+repository: https://github.com/MCN-CQEN/ceai-cqen-scripts-lib
+documentation: https://github.com/MCN-CQEN/ceai-cqen-scripts-lib
+issues: https://github.com/MCN-CQEN/ceai-cqen-scripts-lib/issues
+tags:
+  - aws
+  - aurora
+  - postgresql
+  - database
+  - rds

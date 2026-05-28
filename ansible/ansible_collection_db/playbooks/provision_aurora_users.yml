@@ -1,0 +1,21 @@
+---
+- name: Create or update Aurora PostgreSQL databases, users and secrets
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  collections:
+    - ceai.aurora
+
+  vars:
+    ansible_python_interpreter: "{{ lookup('env', 'ANSIBLE_PYTHON_INTERPRETER') }}"
+    pg_login:
+      login_host: "{{ db_host }}"
+      login_port: "{{ db_port }}"
+      login_user: "{{ db_master_user }}"
+      login_password: "{{ db_master_password }}"
+      ssl_mode: require
+
+  roles:
+    - aurora_users
+    
