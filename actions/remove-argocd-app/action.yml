@@ -21,8 +21,11 @@ inputs:
     description: "Le nom de l'application"
     required: true
   app_dest_namespace: 
-    description: "Espace de destination du projet Argo CD"
+    description: "Namespace Kubernetes de destination de l'application"
     default: "defaultApp"
+  argocd_application_namespace:
+    description: "Namespace de l'objet Application Argo CD. Laisser vide pour le namespace Argo CD par défaut."
+    default: ""
   delete_persistent_volume_claims:
     description: "Supprimer explicitement les PVC de l'application avant la suppression Argo CD"
     default: "false"
@@ -95,22 +98,32 @@ runs:
         set -e
 
         APP_NAME="${{ inputs.app_name }}"
-        APP_NAMESPACE="${{ inputs.app_dest_namespace }}"
+        APP_DEST_NAMESPACE="${{ inputs.app_dest_namespace }}"
+        ARGOCD_APPLICATION_NAMESPACE="${{ inputs.argocd_application_namespace }}"
         APP_PROJECT="${{ inputs.app_project_name }}"
         DELETE_PVC="${{ inputs.delete_persistent_volume_claims }}"
 
-        echo "Vérification de l'existence de l'application Argo CD : $APP_NAME"
+        APP_NAMESPACE_ARGS=()
+        APP_LABEL="$APP_NAME"
+        if [ -n "$ARGOCD_APPLICATION_NAMESPACE" ]; then
+          APP_NAMESPACE_ARGS=(--app-namespace "$ARGOCD_APPLICATION_NAMESPACE")
+          APP_LABEL="$ARGOCD_APPLICATION_NAMESPACE/$APP_NAME"
+        fi
 
-        if argocd app get $APP_NAME --app-namespace $APP_NAMESPACE ; then
-          echo "Application '$APP_NAME' trouvée. Suppression en cours ..."
+        echo "Vérification de l'existence de l'application Argo CD : $APP_LABEL"
+
+        if APP_GET_OUTPUT="$(argocd app get "$APP_NAME" "${APP_NAMESPACE_ARGS[@]}" --grpc-web 2>&1)" ; then
+          printf '%s\n' "$APP_GET_OUTPUT"
+          echo "Application '$APP_LABEL' trouvée. Suppression en cours ..."
 
           if [ "$DELETE_PVC" = "true" ]; then
-            echo "Suppression explicite des PVC de l'application '$APP_NAME' dans le namespace '$APP_NAMESPACE' ..."
+            echo "Suppression explicite des PVC de l'application '$APP_LABEL' dans le namespace Kubernetes '$APP_DEST_NAMESPACE' ..."
 
             argocd app patch-resource "$APP_NAME" \
+              "${APP_NAMESPACE_ARGS[@]}" \
               --project "$APP_PROJECT" \
               --kind PersistentVolumeClaim \
-              --namespace "$APP_NAMESPACE" \
+              --namespace "$APP_DEST_NAMESPACE" \
               --all \
               --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":null}}}' \
               --patch-type application/merge-patch+json \
@@ -119,10 +132,19 @@ runs:
           fi
 
           argocd app delete "$APP_NAME" \
-            --app-namespace "$APP_NAMESPACE" \
+            "${APP_NAMESPACE_ARGS[@]}" \
             --cascade --yes --grpc-web
 
-          echo "Application '$APP_NAME' supprimée avec succès"
+          echo "Application '$APP_LABEL' supprimée avec succès"
         else
-          echo "Application '$APP_NAME' n'existe pas. Rien à supprimer."
-        fi      
+          APP_GET_STATUS=$?
+          printf '%s\n' "$APP_GET_OUTPUT"
+
+          if printf '%s\n' "$APP_GET_OUTPUT" | grep -Eiq "code = NotFound|not found|does not exist|n.existe pas"; then
+            echo "Application '$APP_LABEL' n'existe pas. Rien à supprimer."
+            exit 0
+          fi
+
+          echo "::error::Impossible de lire l'application Argo CD '$APP_LABEL'."
+          exit "$APP_GET_STATUS"
+        fi

@@ -23,6 +23,8 @@ Elle :
 - installe et configure le CLI ArgoCD si nécessaire ;
 - se connecte à Argo CD via utilisateur/mot de passe ;
 - vérifie que le projet existe (sinon interrompt proprement) ;
+- peut cibler un objet `Application` Argo CD dans un namespace applicatif Argo CD optionnel ;
+- peut supprimer explicitement les PVC protégés par `helm.sh/resource-policy: keep` ou `argocd.argoproj.io/sync-options: Delete=false` ;
 - supprime l'application ArgoCD si elle existe ;
 - utilise la cascade de suppression pour nettoyer proprement les ressources.
 
@@ -46,7 +48,9 @@ Elle :
 |argocd_password|Mot de passe ArgoCD|✅|—|
 |app_project_name|Projet ArgoCD contenant l'application. Le projet devrait déjà exister.|✅|—|
 |app_name|Nom de l'application ArgoCD à supprimer|✅|—|
-|app_dest_namespace|Namespace de l'application ArgoCD|❗|defaultApp|
+|app_dest_namespace|Namespace Kubernetes de destination de l'application|❗|defaultApp|
+|argocd_application_namespace|Namespace de l'objet `Application` Argo CD. Laisser vide pour utiliser le namespace Argo CD par défaut.|❗|—|
+|delete_persistent_volume_claims|Supprime explicitement les PVC de l'application avant la suppression Argo CD. À réserver aux workflows de destruction complète.|❗|false|
 
 ## Comportement général
 
@@ -56,6 +60,7 @@ Elle :
 4. Si le projet n'existe pas, le workflow s'arrête proprement.
 5. Vérifie si l'application existe.
 6. Si elle existe :
+    - si `delete_persistent_volume_claims` vaut `true`, supprime explicitement les protections des PVC de l'application, incluant `keep` / `Delete=false`
     - exécute `argocd app delete` avec cascade
     - supprime proprement toutes les ressources associées
 7. Si elle n'existe pas, signale qu'il n'y a rien à supprimer.
@@ -81,6 +86,7 @@ jobs:
           app_project_name: demo-project
           app_name: demo-app
           app_dest_namespace: default
+          delete_persistent_volume_claims: "true"
 ```
 
 ## Exemple de workflow
@@ -109,6 +115,7 @@ jobs:
           app_project_name: my-project
           app_name: ${{ github.event.inputs.app_name }}
           app_dest_namespace: production
+          delete_persistent_volume_claims: "true"
 ```
 
 ## Dépendances
