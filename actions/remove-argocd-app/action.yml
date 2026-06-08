@@ -23,6 +23,9 @@ inputs:
   app_dest_namespace: 
     description: "Espace de destination du projet Argo CD"
     default: "defaultApp"
+  delete_persistent_volume_claims:
+    description: "Supprimer explicitement les PVC de l'application avant la suppression Argo CD"
+    default: "false"
 
 runs:
   using: "composite"
@@ -93,11 +96,28 @@ runs:
 
         APP_NAME="${{ inputs.app_name }}"
         APP_NAMESPACE="${{ inputs.app_dest_namespace }}"
+        APP_PROJECT="${{ inputs.app_project_name }}"
+        DELETE_PVC="${{ inputs.delete_persistent_volume_claims }}"
 
         echo "Vérification de l'existence de l'application Argo CD : $APP_NAME"
 
         if argocd app get $APP_NAME --app-namespace $APP_NAMESPACE ; then
           echo "Application '$APP_NAME' trouvée. Suppression en cours ..."
+
+          if [ "$DELETE_PVC" = "true" ]; then
+            echo "Suppression explicite des PVC de l'application '$APP_NAME' dans le namespace '$APP_NAMESPACE' ..."
+
+            argocd app patch-resource "$APP_NAME" \
+              --project "$APP_PROJECT" \
+              --kind PersistentVolumeClaim \
+              --namespace "$APP_NAMESPACE" \
+              --all \
+              --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":null}}}' \
+              --patch-type application/merge-patch+json \
+              --grpc-web || true
+
+          fi
+
           argocd app delete "$APP_NAME" \
             --app-namespace "$APP_NAMESPACE" \
             --cascade --yes --grpc-web
