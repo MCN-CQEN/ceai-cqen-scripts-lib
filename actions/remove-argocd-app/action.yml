@@ -23,9 +23,9 @@ inputs:
   app_dest_namespace: 
     description: "Namespace Kubernetes de destination de l'application"
     default: "defaultApp"
-  argocd_application_namespace:
-    description: "Namespace de l'objet Application Argo CD. Laisser vide pour le namespace Argo CD par défaut."
-    default: ""
+  # argocd_application_namespace:
+  #   description: "Namespace de l'objet Application Argo CD. Laisser vide pour le namespace Argo CD par défaut."
+  #   default: ""
   delete_persistent_volume_claims:
     description: "Supprimer explicitement les PVC de l'application avant la suppression Argo CD"
     default: "false"
@@ -99,16 +99,16 @@ runs:
 
         APP_NAME="${{ inputs.app_name }}"
         APP_DEST_NAMESPACE="${{ inputs.app_dest_namespace }}"
-        ARGOCD_APPLICATION_NAMESPACE="${{ inputs.argocd_application_namespace }}"
+        # ARGOCD_APPLICATION_NAMESPACE="${{ inputs.argocd_application_namespace }}"
         APP_PROJECT="${{ inputs.app_project_name }}"
         DELETE_PVC="${{ inputs.delete_persistent_volume_claims }}"
 
         APP_NAMESPACE_ARGS=()
         APP_LABEL="$APP_NAME"
-        if [ -n "$ARGOCD_APPLICATION_NAMESPACE" ]; then
-          APP_NAMESPACE_ARGS=(--app-namespace "$ARGOCD_APPLICATION_NAMESPACE")
-          APP_LABEL="$ARGOCD_APPLICATION_NAMESPACE/$APP_NAME"
-        fi
+        # if [ -n "$ARGOCD_APPLICATION_NAMESPACE" ]; then
+        #   APP_NAMESPACE_ARGS=(--app-namespace "$ARGOCD_APPLICATION_NAMESPACE")
+        #   APP_LABEL="$ARGOCD_APPLICATION_NAMESPACE/$APP_NAME"
+        # fi
 
         echo "Vérification de l'existence de l'application Argo CD : $APP_LABEL"
 
