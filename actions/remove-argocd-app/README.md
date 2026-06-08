@@ -49,7 +49,6 @@ Elle :
 |app_project_name|Projet ArgoCD contenant l'application. Le projet devrait déjà exister.|✅|—|
 |app_name|Nom de l'application ArgoCD à supprimer|✅|—|
 |app_dest_namespace|Namespace Kubernetes de destination de l'application|❗|defaultApp|
-|argocd_application_namespace|Namespace de l'objet `Application` Argo CD. Laisser vide pour utiliser le namespace Argo CD par défaut.|❗|—|
 |delete_persistent_volume_claims|Supprime explicitement les PVC de l'application avant la suppression Argo CD. À réserver aux workflows de destruction complète.|❗|false|
 
 ## Comportement général

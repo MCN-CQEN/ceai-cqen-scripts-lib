@@ -98,12 +98,11 @@ runs:
         APP_DEST_NAMESPACE="${{ inputs.app_dest_namespace }}"
         APP_PROJECT="${{ inputs.app_project_name }}"
         DELETE_PVC="${{ inputs.delete_persistent_volume_claims }}"
-        APP_NAMESPACE_ARGS=()
         APP_LABEL="$APP_NAME"
         
         echo "Vérification de l'existence de l'application Argo CD : $APP_LABEL"
 
-        if APP_GET_OUTPUT="$(argocd app get "$APP_NAME" "${APP_NAMESPACE_ARGS[@]}" --grpc-web 2>&1)" ; then
+        if APP_GET_OUTPUT="$(argocd app get "$APP_NAME" --grpc-web 2>&1)" ; then
           printf '%s\n' "$APP_GET_OUTPUT"
           echo "Application '$APP_LABEL' trouvée. Suppression en cours ..."
 
@@ -111,7 +110,6 @@ runs:
             echo "Suppression explicite des PVC de l'application '$APP_LABEL' dans le namespace Kubernetes '$APP_DEST_NAMESPACE' ..."
 
             argocd app patch-resource "$APP_NAME" \
-              "${APP_NAMESPACE_ARGS[@]}" \
               --project "$APP_PROJECT" \
               --kind PersistentVolumeClaim \
               --namespace "$APP_DEST_NAMESPACE" \
@@ -123,7 +121,6 @@ runs:
           fi
 
           argocd app delete "$APP_NAME" \
-            "${APP_NAMESPACE_ARGS[@]}" \
             --cascade --yes --grpc-web
 
           echo "Application '$APP_LABEL' supprimée avec succès"
