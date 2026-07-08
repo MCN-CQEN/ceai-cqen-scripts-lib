@@ -6,7 +6,7 @@ inputs:
     description: "Nom de la variable retournée par GitVersion qui contient le numéro de build."
     default: ShortSha
   preReleaseNumberField:
-    description: "Nom de la variable retournée par GitVersion qui contient le numéro de build du release."
+    description: "Nom de la variable retournée par GitVersion qui contient le numéro de build du release. Conservé pour compatibilité avec les anciens workflows."
     default: ShortSha
   mainBranchNameRegex:
     description: "Regex de la branche main"
@@ -20,7 +20,7 @@ inputs:
 
 outputs:
   semVer:
-    description: "Version de semver (<majeure>.<mineure>.<revision> pour 'main' ou <majeure>.<mineure>.<revision>-<etiquette>.<SHA>)"
+    description: "Version de semver (<majeure>.<mineure>.<revision> pour 'main' ou <majeure>.<mineure>.<revision>-<prebuild>.<YYYYMMDD>.<SSSSS>.<hashcommit>)"
     value: ${{ steps.calculerVersion.outputs.semVer }}
     
 runs:
@@ -50,11 +50,31 @@ runs:
     id: calculerVersion
     shell: bash
     env: 
+      # GitVersion demeure la source de référence pour la portion stable
+      # Major.Minor.Patch; le script ajoute seulement le suffixe de préversion.
       MAJOR_MINOR_PATCH: ${{ steps.gitversion.outputs.majorMinorPatch }}
+
+      # Le label GitVersion indique le contexte GitFlow attendu: feature-*,
+      # dev, rc, hotfix-*, etc. Le script l'utilise pour le segment prebuild.
       PRE_RELEASE_LABEL: ${{ steps.gitversion.outputs.preReleaseLabel }}
+
+      # Ces deux variables restent exposées pour compatibilité avec les anciens
+      # paramètres, même si le nouveau format n'utilise plus un compteur GitVersion
+      # comme dernier segment de version.
       BUILD_NUMBER: ${{ steps.gitversion.outputs[inputs.buildNumberField] }}
       PRE_RELEASE_NUMBER: ${{ steps.gitversion.outputs[inputs.preReleaseNumberField] }}
+
+      # Le hash court rend chaque préversion traçable jusqu'au commit exact.
+      # github.sha sert de repli si shortSha n'est pas fourni par GitVersion.
+      COMMIT_HASH: ${{ steps.gitversion.outputs.shortSha }}
+      GITHUB_SHA: ${{ github.sha }}
+
+      # Le préfixe optionnel permet de générer des tags comme v1.2.3 si le dépôt
+      # le souhaite, tout en gardant le format de préversion standardisé.
       VERSION_PREFIX: ${{ inputs.versionPrefix }}
+
+      # Les regex de branches permettent au script de distinguer la version stable
+      # main/prod/master des préversions release, feature, develop et hotfix.
       GITHUB_REF: ${{ github.ref }} 
       MAIN_BRANCH_NAME_REGEX: ${{ inputs.mainBranchNameRegex }}
       RELEASE_BRANCH_NAME_REGEX: ${{ inputs.releaseBranchNameRegex }}

@@ -59,6 +59,9 @@ on:
       - hotfix/*
       - main
       - dev
+      # develop est inclus explicitement pour les dépôts qui utilisent le nom
+      # complet de la branche d'intégration plutôt que son alias dev.
+      - develop
 jobs:
   get_semver_version:
     name: Calculer la version et appliquer le tag
@@ -82,10 +85,29 @@ jobs:
 ```
 
 Explications : 
-1. Le workflow sera activé par un push sur une des branches spécifiées (`feature/*`, `release/*`, `hotfix/*`, `prod`, `dev`).
+1. Le workflow sera activé par un push sur une des branches spécifiées (`feature/*`, `release/*`, `hotfix/*`, `main`, `dev`, `develop`).
 2. Les permissions sont octroyées pour, entre autres, permettre à l'action de créer des tags de version.
 3. L'action commune `get-semver` est appelée pour calculer la prochaine version
 4. Le tag est créé basé la version établie à l'étape précédente.
+
+Les branches de préversion utilisent le format suivant :
+
+```text
+Major.Minor.Patch-prebuild.YYYYMMDD.SSSSS.hashcommit
+```
+
+Exemples :
+
+| Branche | Exemple |
+|---------|---------|
+| `feature/*` | `1.4.2-feature-auth.20260707.45296.a1b2c3d` |
+| `dev` / `develop` | `1.4.2-dev.20260707.45296.a1b2c3d` |
+| `release/*` | `1.5.0-rc.20260707.45296.a1b2c3d` |
+| `hotfix/*` | `1.4.3-hotfix-correction.20260707.45296.a1b2c3d` |
+| `main` | `1.5.0` |
+
+GitVersion demeure la source de référence pour la portion `Major.Minor.Patch`.
+Le suffixe de préversion est ajouté par l'action commune à partir du contexte GitFlow, de la date UTC du workflow, du nombre de secondes écoulées depuis le début de la journée UTC et du hash court du commit.
 
 
 #### Un workflow pour valider les PR
@@ -212,4 +234,3 @@ Pour se faire, allez dans les paramètres de votre dépôt, puis dans la section
     3. *Block force pushes*
 
 Sauvegardez le tout, et voilà ! Vos branches sont protégées.
-

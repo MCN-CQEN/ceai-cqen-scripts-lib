@@ -6,20 +6,30 @@ Respecte les règles de versionnage définies pour le CQEN :
 
 | Branche   | Exemple                            |
 |-----------|------------------------------------|
-| `feature` | 1.2.0-feature.nouvel-ecran+ca1f980 |
-| `dev`     | 1.2.0-dev+865860e                  |
-| `release` | 2.0.0-rc.1                         |
+| `feature` | 1.4.2-feature-auth.20260707.45296.a1b2c3d |
+| `dev` / `develop` | 1.4.2-dev.20260707.45296.a1b2c3d |
+| `release` | 1.5.0-rc.20260707.45296.a1b2c3d |
 | `main`    | 2.0.0                              |
-| `hotfix`  | 2.0.1-hotfix.CVE-1234+f03cd2a      |
-| `support` | 2.0.1-support+ec13609              |
+| `hotfix`  | 1.4.3-hotfix-correction.20260707.45296.a1b2c3d |
 
+Pour les branches de préversion, GitVersion demeure la source de référence pour la portion `Major.Minor.Patch`.
+L'action ajoute ensuite un suffixe standardisé :
+
+```text
+Major.Minor.Patch-prebuild.YYYYMMDD.SSSSS.hashcommit
+```
+
+- `prebuild` représente le contexte GitFlow (`feature-*`, `dev`, `rc`, `hotfix-*`).
+- `YYYYMMDD` correspond à la date UTC d'exécution du workflow.
+- `SSSSS` correspond au nombre de secondes écoulées depuis le début de la journée UTC.
+- `hashcommit` correspond au hash court du commit.
 
 # Paramètres
 
 | Variable               | Type     | Description    |
 |------------------------|----------|----------------|
-| buildNumberField       | `string` | Nom de la variable retournée par GitVersion qui contient le numéro de build. |
-| preReleaseNumberField  | `string` | Nom de la variable retournée par GitVersion qui contient le numéro de build du release. |
+| buildNumberField       | `string` | Conservé pour compatibilité. |
+| preReleaseNumberField  | `string` | Conservé pour compatibilité. |
 | mainBranchNameRegex    | `regex`  | Regex de la branche main |
 | releaseBranchNameRegex | `regex`  | Regex de la branche release |
 | versionPrefix          | `string` | Préfixe de la version (ex : 'v') qui sera systématiquement ajouté au début du tag de version"  |
@@ -29,7 +39,7 @@ Respecte les règles de versionnage définies pour le CQEN :
 
 | Variable    | Type     | Description    |
 |-------------|----------|----------------|
-| semVer      | `string` | Le prochain numéro de version pour la branche en cours. Voir la grille plus haut pour des exemples | 
+| semVer      | `string` | Le prochain numéro de version pour la branche en cours. Voir la grille plus haut pour des exemples. |
 
 # Exemple d'utilisation
 

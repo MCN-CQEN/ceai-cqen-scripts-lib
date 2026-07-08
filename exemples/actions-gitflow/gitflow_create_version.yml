@@ -7,6 +7,9 @@ on:
       - hotfix/*
       - main
       - dev
+      # develop est inclus explicitement pour les dépôts qui utilisent le nom
+      # complet de la branche d'intégration plutôt que son alias dev.
+      - develop
 jobs:
   get_semver_version:
     name: Calculer la version et appliquer le tag
