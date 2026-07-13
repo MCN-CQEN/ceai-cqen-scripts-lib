@@ -74,7 +74,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.0
 
       - name: Remove ArgoCD App
         uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/remove-argocd-app@main
@@ -104,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.0
 
       - name: Remove Application
         uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/remove-argocd-app@main

@@ -67,7 +67,7 @@ Une composite action dans GitHub Actions est une manière de regrouper plusieurs
        runs-on: ubuntu-latest
        steps:
          - name: Checkout du code
-           uses: actions/checkout@v3
+           uses: actions/checkout@v7.0.0
          - name: Utiliser l'action composite
            uses: MCN-CQEN/ceai-cqen-commons/actions/exemple@feature/actions
            with:

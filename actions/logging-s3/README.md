@@ -107,7 +107,7 @@ jobs:
 
 ## 🧩 Dépendances
 
-- GitHub Actions aws-actions/configure-aws-credentials@v5.0.0
+- GitHub Actions aws-actions/configure-aws-credentials@v6.2.2
 - AWS CLI installé dans le runner
 - jq pour générer le fichier JSON
 - Rôle IAM avec permissions sts:AssumeRole et s3:PutObject
@@ -125,4 +125,3 @@ jobs:
 |Erreur `AccessDenied` AWS|Le rôle IAM n’a pas les permissions nécessaires|Vérifier `s3:PutObject` et le trust policy|
 |jq: `command not found`|Runner sans `jq`|Utiliser une image contenant `jq` ou installer manuellement|
 |Le fichier ne se trouve pas dans S3|Mauvaise clé ou chemin configuré|Vérifier le bucket, le préfixe et les inputs|
-		

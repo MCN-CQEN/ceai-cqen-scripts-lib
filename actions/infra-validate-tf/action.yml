@@ -50,19 +50,19 @@ runs:
     using: "composite"    
     steps:  
         - name: Checkout the repository (${{ inputs.environment }}) to the runner
-          uses: actions/checkout@v4      
+          uses: actions/checkout@v7.0.0
           with:
             fetch-depth: 0
     
         - name: "Configure AWS credentials for role ${{ inputs.role_to_assume }}"
-          uses: aws-actions/configure-aws-credentials@v4          
+          uses: aws-actions/configure-aws-credentials@v6.2.2
           with:                
             role-to-assume: ${{ inputs.role_to_assume }}
             role-session-name: GitHub_to_AWS_via_FederatedOIDC
             aws-region: ${{ inputs.aws_region }}
 
         - name: Setup Terraform with specified version on the runner
-          uses: hashicorp/setup-terraform@v3
+          uses: hashicorp/setup-terraform@v4.0.1
           
         - name: Terraform format
           id: fmt
@@ -91,4 +91,4 @@ runs:
             directory: ${{ inputs.working_directory }}
             skip_check: ${{ inputs.checkov_ignore_list }}
             output_format: json
-            download_external_modules: true                 
+            download_external_modules: true

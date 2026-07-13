@@ -156,7 +156,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - name: Créer application ArgoCD
         uses: ./github-actions/create-argocd-app
@@ -235,4 +235,3 @@ kubectl get pods -n <namespace>
 * Sync automatique
 * Attente du statut Healthy
 * Paramétrage Helm dynamique
-

@@ -42,7 +42,7 @@ jobs:
       contents: write 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7.0.0
 
     - name: Obtenir version
       id: obtenir_version
@@ -57,4 +57,3 @@ jobs:
       with:
         semVer: ${{ steps.obtenir_version.outputs.semVer }}
 ```
-

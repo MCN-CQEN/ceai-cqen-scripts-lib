@@ -65,7 +65,7 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.0
         
       - name: Validation du PR sur main ou develop
         id: gitflow_on_pr
@@ -77,4 +77,3 @@ jobs:
 
        
  
-

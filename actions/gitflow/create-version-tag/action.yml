@@ -9,7 +9,7 @@ runs:
   using: "composite"
   steps:
   - name: Checkout code
-    uses: actions/checkout@v4
+    uses: actions/checkout@v7.0.0
   
   - name: Préparer le path github pour la prochaine étape
     run: echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH

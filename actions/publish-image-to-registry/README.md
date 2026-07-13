@@ -62,7 +62,7 @@ jobs:
 
 1. Checkout du dépôt
 
-    Utilisation de actions/checkout@v4 pour récupérer le contenu du repository.
+    Utilisation de actions/checkout@v7.0.0 pour récupérer le contenu du repository.
 
 2. Connexion au registre de conteneurs
 

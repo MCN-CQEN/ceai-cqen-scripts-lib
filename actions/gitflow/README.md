@@ -68,7 +68,7 @@ jobs:
       contents: write
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7.0.0
 
     - name: Obtenir version
       id: obtenir_version
@@ -105,7 +105,7 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.0
         
       - name: Validation du PR
         id: valider_pr
@@ -212,4 +212,3 @@ Pour se faire, allez dans les paramètres de votre dépôt, puis dans la section
     3. *Block force pushes*
 
 Sauvegardez le tout, et voilà ! Vos branches sont protégées.
-
