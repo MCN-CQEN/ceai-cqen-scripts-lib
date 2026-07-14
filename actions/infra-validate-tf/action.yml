@@ -32,6 +32,10 @@ inputs:
       description: "Liste des vérifications Checkov à ignorer, séparées par des virgules. Par exemple: 'BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149'"
       required: false
       default: "BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149"  # Example of checks to ignore
+    checkov_ca_bundle:
+      description: "Chemin facultatif vers un bundle CA présent sur le runner. Si vide, les chemins Linux standards sont détectés automatiquement."
+      required: false
+      default: ""
 outputs:
     terraform_validate:
         description: "Terraform validate output"
@@ -82,13 +86,51 @@ runs:
           run: terraform validate
           shell: bash
 
+        - name: Prepare trusted CA bundle for Checkov
+          id: checkov-ca
+          env:
+            CONFIGURED_CA_BUNDLE: ${{ inputs.checkov_ca_bundle }}
+          run: |
+            set -euo pipefail
+
+            candidates=()
+            if [[ -n "$CONFIGURED_CA_BUNDLE" ]]; then
+              candidates+=("$CONFIGURED_CA_BUNDLE")
+            fi
+            candidates+=(
+              /etc/ssl/certs/ca-certificates.crt
+              /etc/pki/tls/certs/ca-bundle.crt
+            )
+
+            for candidate in "${candidates[@]}"; do
+              if [[ -r "$candidate" ]]; then
+                cp "$candidate" "$RUNNER_TEMP/checkov-ca-bundle.crt"
+                echo "container_path=/github/runner_temp/checkov-ca-bundle.crt" >> "$GITHUB_OUTPUT"
+                echo "Bundle CA transmis à Checkov depuis: $candidate"
+                exit 0
+              fi
+            done
+
+            echo "::warning::Aucun bundle CA compatible trouvé; Checkov utilisera son magasin de certificats par défaut."
+            echo "container_path=" >> "$GITHUB_OUTPUT"
+          shell: bash
+
         - name: Checkov scan
           # This step uses the Checkov GitHub Action to scan Terraform code for security issues.
           id: checkov
-          uses: bridgecrewio/checkov-action@master        
+          uses: bridgecrewio/checkov-action@master
+          env:
+            # Docker actions mount RUNNER_TEMP at /github/runner_temp.
+            # Reuse the runner trust store so corporate proxy CAs remain trusted.
+            REQUESTS_CA_BUNDLE: ${{ steps.checkov-ca.outputs.container_path }}
           with:
             framework: terraform
             directory: ${{ inputs.working_directory }}
             skip_check: ${{ inputs.checkov_ignore_list }}
             output_format: json
             download_external_modules: true
+
+        - name: Remove temporary Checkov CA bundle
+          if: always()
+          run: rm -f "$RUNNER_TEMP/checkov-ca-bundle.crt"
+          shell: bash
