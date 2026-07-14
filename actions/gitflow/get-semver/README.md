@@ -28,8 +28,6 @@ Major.Minor.Patch-prebuild.YYYYMMDD.SSSSS.hashcommit
 
 | Variable               | Type     | Description    |
 |------------------------|----------|----------------|
-| buildNumberField       | `string` | Conservé pour compatibilité. |
-| preReleaseNumberField  | `string` | Conservé pour compatibilité. |
 | mainBranchNameRegex    | `regex`  | Regex de la branche main |
 | releaseBranchNameRegex | `regex`  | Regex de la branche release |
 | versionPrefix          | `string` | Préfixe de la version (ex : 'v') qui sera systématiquement ajouté au début du tag de version"  |

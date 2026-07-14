@@ -2,12 +2,6 @@ name: 'Obtenir le version et la balise de sortie'
 description: "À l'aide de GitVersion, déduit le numéro de version (semver)"
 
 inputs:
-  buildNumberField:
-    description: "Nom de la variable retournée par GitVersion qui contient le numéro de build."
-    default: ShortSha
-  preReleaseNumberField:
-    description: "Nom de la variable retournée par GitVersion qui contient le numéro de build du release. Conservé pour compatibilité avec les anciens workflows."
-    default: ShortSha
   mainBranchNameRegex:
     description: "Regex de la branche main"
     default: ^master$|^main$|^prod$
@@ -57,12 +51,6 @@ runs:
       # Le label GitVersion indique le contexte GitFlow attendu: feature-*,
       # dev, rc, hotfix-*, etc. Le script l'utilise pour le segment prebuild.
       PRE_RELEASE_LABEL: ${{ steps.gitversion.outputs.preReleaseLabel }}
-
-      # Ces deux variables restent exposées pour compatibilité avec les anciens
-      # paramètres, même si le nouveau format n'utilise plus un compteur GitVersion
-      # comme dernier segment de version.
-      BUILD_NUMBER: ${{ steps.gitversion.outputs[inputs.buildNumberField] }}
-      PRE_RELEASE_NUMBER: ${{ steps.gitversion.outputs[inputs.preReleaseNumberField] }}
 
       # Le hash court rend chaque préversion traçable jusqu'au commit exact.
       # github.sha sert de repli si shortSha n'est pas fourni par GitVersion.
