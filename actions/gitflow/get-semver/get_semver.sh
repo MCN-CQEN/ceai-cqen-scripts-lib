@@ -26,7 +26,7 @@ get_prebuild_label() {
         echo "feature-${BASH_REMATCH[1]}"
     elif [[ $branch_name =~ ^hotfix[\/-](.+)$ ]]; then
         echo "hotfix-${BASH_REMATCH[1]}"
-    elif [[ $branch_name =~ ^dev(elop)?(ment)?$ ]]; then
+    elif [[ $branch_name =~ ^dev$ ]]; then
         echo "dev"
     elif [[ $branch_name =~ $RELEASE_BRANCH_NAME_REGEX ]]; then
         echo "rc"

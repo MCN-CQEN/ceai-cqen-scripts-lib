@@ -1,9 +1,9 @@
-name: "Validation du PR sur main ou develop"
+name: "Validation du PR sur main ou dev"
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
 jobs:
-  gitflow_on_pr_main_or_develop:
+  gitflow_on_pr_main_or_dev:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

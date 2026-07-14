@@ -74,7 +74,7 @@ runs:
       VERSION_PREFIX: ${{ inputs.versionPrefix }}
 
       # Les regex de branches permettent au script de distinguer la version stable
-      # main/prod/master des préversions release, feature, develop et hotfix.
+      # main/prod/master des préversions release, feature, dev et hotfix.
       GITHUB_REF: ${{ github.ref }} 
       MAIN_BRANCH_NAME_REGEX: ${{ inputs.mainBranchNameRegex }}
       RELEASE_BRANCH_NAME_REGEX: ${{ inputs.releaseBranchNameRegex }}

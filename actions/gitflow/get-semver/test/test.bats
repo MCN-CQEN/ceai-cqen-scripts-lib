@@ -77,12 +77,12 @@ __after() {
   __after
 }
 
-@test "Tester branche develop" {
+@test "Tester branche dev" {
   # Arrange
   __before
-  # develop doit produire une préversion "dev" ordonnable et traçable, car
-  # elle représente l'environnement d'intégration continue du GitFlow.
-  export GITHUB_REF="refs/heads/develop"
+  # dev doit produire une préversion "dev" ordonnable et traçable, car
+  # elle représente l'environnement d'intégration continue retenu au CQEN.
+  export GITHUB_REF="refs/heads/dev"
   export MAIN_BRANCH_NAME_REGEX="^master$|^main$|^prod$"
   export RELEASE_BRANCH_NAME_REGEX="^release[\/-]"
   export VERSION_PREFIX=""
@@ -96,7 +96,7 @@ __after() {
   run get_semver.sh
 
   # Assert
-  assert_output --partial "Branch name : develop"
+  assert_output --partial "Branch name : dev"
   assert_output --partial "semVer=1.4.2-dev.20260707.45296.a1b2c3d"
   __after
 }

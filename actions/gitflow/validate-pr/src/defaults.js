@@ -11,11 +11,10 @@ const defaultRestrictions = [
         "restriction_branche": "^(release)|(hotfix)\/.*$"
     },
     {
-        "dest": "^dev(elop)?(ment)?$",
+        "dest": "^dev$",
         "restriction_branche": "^(release)|(feature)|(hotfix)\/.*$"
     }
 ];
 
 exports.DEFAULT_RESTRICTIONS = defaultRestrictions; 
-
 

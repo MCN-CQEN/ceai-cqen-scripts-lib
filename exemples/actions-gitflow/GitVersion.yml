@@ -7,8 +7,8 @@ branches:
     regex: ^master$|^main$|^prod$
     label: ''
     
-  develop:
-    regex: ^dev(elop)?(ment)?$
+  dev:
+    regex: ^dev$
     label: dev
 
   feature:

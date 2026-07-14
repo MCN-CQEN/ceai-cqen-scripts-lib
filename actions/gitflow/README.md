@@ -2,7 +2,7 @@
 
 Ce dossier contient des Github Actions réutilisables facilitant la mise en oeuvre du GitFlow dans les dépôts de code du CQEN (mais notez que ces actions sont assez agnostiques pour être utilisées en dehors du CQEN)
 
-> Note sur les noms des branches : `main`, `master` et `prod` sont synonymes. `develop` et `dev` sont synonymes. Ils sont interchangeables, mais dans un même dépôt, il faut faire un choix et toujours utiliser les mêmes valeurs.
+> Note sur les noms des branches : `main`, `master` et `prod` sont synonymes. Pour la branche d'intégration CQEN, le nom retenu est `dev`.
 
 ## Comment utiliser le gitflow dans votre projet
 
@@ -33,7 +33,7 @@ TL;DR, voici un résumé des étapes
 
 ### 2. Cloner le repo localement
 
-Clonez le repo en pointant sur la branche `main` (ou *develop*, selon votre choix à l'étape précédente).
+Clonez le repo en pointant sur la branche `main`.
 
 ```sh
 git clone [url_repo]
@@ -59,9 +59,6 @@ on:
       - hotfix/*
       - main
       - dev
-      # develop est inclus explicitement pour les dépôts qui utilisent le nom
-      # complet de la branche d'intégration plutôt que son alias dev.
-      - develop
 jobs:
   get_semver_version:
     name: Calculer la version et appliquer le tag
@@ -85,7 +82,7 @@ jobs:
 ```
 
 Explications : 
-1. Le workflow sera activé par un push sur une des branches spécifiées (`feature/*`, `release/*`, `hotfix/*`, `main`, `dev`, `develop`).
+1. Le workflow sera activé par un push sur une des branches spécifiées (`feature/*`, `release/*`, `hotfix/*`, `main`, `dev`).
 2. Les permissions sont octroyées pour, entre autres, permettre à l'action de créer des tags de version.
 3. L'action commune `get-semver` est appelée pour calculer la prochaine version
 4. Le tag est créé basé la version établie à l'étape précédente.
@@ -101,7 +98,7 @@ Exemples :
 | Branche | Exemple |
 |---------|---------|
 | `feature/*` | `1.4.2-feature-auth.20260707.45296.a1b2c3d` |
-| `dev` / `develop` | `1.4.2-dev.20260707.45296.a1b2c3d` |
+| `dev` | `1.4.2-dev.20260707.45296.a1b2c3d` |
 | `release/*` | `1.5.0-rc.20260707.45296.a1b2c3d` |
 | `hotfix/*` | `1.4.3-hotfix-correction.20260707.45296.a1b2c3d` |
 | `main` | `1.5.0` |
@@ -117,12 +114,12 @@ Créer un nouveau workflow sous `.github/workflows/` (le nom n'a pas d'importanc
 ```yaml
 # .github/workflows/gitflow_valider_pr.yml
 
-name: "Validation du PR sur main ou develop"
+name: "Validation du PR sur main ou dev"
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
 jobs:
-  gitflow_on_pr_main_or_develop:
+  gitflow_on_pr_main_or_dev:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -161,8 +158,8 @@ branches:
     regex: ^master$|^main$|^prod$
     label: ''
     
-  develop:
-    regex: ^dev(elop)?(ment)?$
+  dev:
+    regex: ^dev$
     label: dev
 
   feature:
@@ -225,7 +222,7 @@ Pour se faire, allez dans les paramètres de votre dépôt, puis dans la section
     2. *Require status checks to pass*
         - Cliquez sur *Add checks* et rechercher le nom de la job contenue dans le workflow de validation des PR. 
             
-            Attention : Ce n'est pas le nom du workflow lui-même, mais bien le nom de la job à l'intérieur du workflow. Si vous avez copié le flow `.github/workflows/gitflow_valider_pr.yml`, vous devriez avoir une job nommée `gitflow_on_pr_main_or_develop`.
+            Attention : Ce n'est pas le nom du workflow lui-même, mais bien le nom de la job à l'intérieur du workflow. Si vous avez copié le flow `.github/workflows/gitflow_valider_pr.yml`, vous devriez avoir une job nommée `gitflow_on_pr_main_or_dev`.
 
             > ![alt text](./docs/images/repo-branch-ruleset-status-checks-1.jpeg)
             

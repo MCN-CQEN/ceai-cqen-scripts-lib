@@ -7,7 +7,7 @@ Respecte les règles de versionnage définies pour le CQEN :
 | Branche   | Exemple                            |
 |-----------|------------------------------------|
 | `feature` | 1.4.2-feature-auth.20260707.45296.a1b2c3d |
-| `dev` / `develop` | 1.4.2-dev.20260707.45296.a1b2c3d |
+| `dev` | 1.4.2-dev.20260707.45296.a1b2c3d |
 | `release` | 1.5.0-rc.20260707.45296.a1b2c3d |
 | `main`    | 2.0.0                              |
 | `hotfix`  | 1.4.3-hotfix-correction.20260707.45296.a1b2c3d |
@@ -52,7 +52,7 @@ on:
       - release/*
       - hotfix/*
       - main
-      - develop
+      - dev
 jobs:
   get_semver_version:
     name: Calculer la version et appliquer le tag
