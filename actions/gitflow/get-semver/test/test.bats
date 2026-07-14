@@ -31,6 +31,8 @@ __after() {
 @test "Tester branch main" {
   # Arrange
   __before
+  # La branche principale doit rester une version stable pure: aucun suffixe
+  # prebuild/date/secondes/hash ne doit être ajouté sur main.
   export GITHUB_REF="refs/heads/main"
   export MAIN_BRANCH_NAME_REGEX="^master$|^main$|^prod$"
   export VERSION_PREFIX=""
@@ -54,53 +56,65 @@ __after() {
 @test "Tester branche de release" {
   # Arrange
   __before
+  # Les variables temporelles et le hash sont figés pour rendre le test
+  # déterministe tout en validant le format réel produit par le workflow.
   export GITHUB_REF="refs/heads/release/1.0.0"
   export MAIN_BRANCH_NAME_REGEX="^master$|^main$|^prod$"
   export RELEASE_BRANCH_NAME_REGEX="^release[\/-]"
   export VERSION_PREFIX=""
   export MAJOR_MINOR_PATCH="1.0.0"
   export PRE_RELEASE_LABEL="rc"
-  export PRE_RELEASE_NUMBER="2"
+  export VERSION_DATE="20260707"
+  export VERSION_SECONDS="45296"
+  export COMMIT_HASH="a1b2c3d"
 
   # Act
   run get_semver.sh
 
   # Assert
   assert_output --partial "Branch name : release/1.0.0"
-  assert_output --partial "semVer=1.0.0-rc.2"
+  assert_output --partial "semVer=1.0.0-rc.20260707.45296.a1b2c3d"
   __after
 }
 
-@test "Tester branche de release avec pre_release_number number null" {
+@test "Tester branche dev" {
   # Arrange
   __before
-  export GITHUB_REF="refs/heads/release/1.0.0"
+  # dev doit produire une préversion "dev" ordonnable et traçable, car
+  # elle représente l'environnement d'intégration continue retenu au CQEN.
+  export GITHUB_REF="refs/heads/dev"
   export MAIN_BRANCH_NAME_REGEX="^master$|^main$|^prod$"
   export RELEASE_BRANCH_NAME_REGEX="^release[\/-]"
   export VERSION_PREFIX=""
-  export MAJOR_MINOR_PATCH="1.0.0"
-  export PRE_RELEASE_LABEL="rc"
-  export PRE_RELEASE_NUMBER=""
+  export MAJOR_MINOR_PATCH="1.4.2"
+  export PRE_RELEASE_LABEL="dev"
+  export VERSION_DATE="20260707"
+  export VERSION_SECONDS="45296"
+  export COMMIT_HASH="a1b2c3d"
 
   # Act
   run get_semver.sh
 
   # Assert
-  assert_output --partial "Branch name : release/1.0.0"
-  assert_output --partial "semVer=1.0.0-rc.0"
+  assert_output --partial "Branch name : dev"
+  assert_output --partial "semVer=1.4.2-dev.20260707.45296.a1b2c3d"
   __after
 }
 
-@test "Tester branche de feature avec build_number null et préfix 'v'" {
+@test "Tester branche de feature avec préfix 'v'" {
   # Arrange
   __before
-  export GITHUB_REF="refs/heads/feature/test"
+  # Le préfixe optionnel "v" doit s'appliquer au début de la version sans
+  # modifier la structure du suffixe de préversion standardisé.
+  export GITHUB_REF="refs/heads/feature/auth"
   export MAIN_BRANCH_NAME_REGEX="^master$|^main$|^prod$"
   export RELEASE_BRANCH_NAME_REGEX="^release[\/-]"
   export VERSION_PREFIX="v"
-  export MAJOR_MINOR_PATCH="1.1.0"
-  export PRE_RELEASE_LABEL="feature-test"
-  export BUILD_NUMBER=""
+  export MAJOR_MINOR_PATCH="1.4.2"
+  export PRE_RELEASE_LABEL="feature-auth"
+  export VERSION_DATE="20260707"
+  export VERSION_SECONDS="45296"
+  export COMMIT_HASH="a1b2c3d"
 
   # Act
   run get_semver.sh
@@ -109,8 +123,32 @@ __after() {
   gh_output=($(echo "$(cat $GITHUB_OUTPUT)"))
   
   # Assert
-  [ "${gh_output[0]}" = "semVer=v1.1.0-feature-test.0" ]
-  assert_output --partial "Branch name : feature/test"
-  assert_output --partial "semVer=v1.1.0-feature-test.0"
+  [ "${gh_output[0]}" = "semVer=v1.4.2-feature-auth.20260707.45296.a1b2c3d" ]
+  assert_output --partial "Branch name : feature/auth"
+  assert_output --partial "semVer=v1.4.2-feature-auth.20260707.45296.a1b2c3d"
+  __after
+}
+
+@test "Tester branche hotfix" {
+  # Arrange
+  __before
+  # Une branche hotfix doit conserver son contexte dans le segment prebuild afin
+  # de distinguer un correctif de préproduction d'une release ou d'une feature.
+  export GITHUB_REF="refs/heads/hotfix/correction"
+  export MAIN_BRANCH_NAME_REGEX="^master$|^main$|^prod$"
+  export RELEASE_BRANCH_NAME_REGEX="^release[\/-]"
+  export VERSION_PREFIX=""
+  export MAJOR_MINOR_PATCH="1.4.3"
+  export PRE_RELEASE_LABEL="hotfix-correction"
+  export VERSION_DATE="20260707"
+  export VERSION_SECONDS="45296"
+  export COMMIT_HASH="a1b2c3d"
+
+  # Act
+  run get_semver.sh
+
+  # Assert
+  assert_output --partial "Branch name : hotfix/correction"
+  assert_output --partial "semVer=1.4.3-hotfix-correction.20260707.45296.a1b2c3d"
   __after
 }

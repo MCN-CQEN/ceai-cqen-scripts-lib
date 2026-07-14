@@ -1,7 +1,7 @@
 name: 'Action de vérification de pull request gitflow'
 description: |
   Cette action permet de valider les pull requests en tenant compte des restrictions sur les branches gitflow. 
-  Par exemple, une branche feature ne peut être fusionnée qu'avec la branche develop
+  Par exemple, une branche feature ne peut être fusionnée qu'avec la branche dev
 inputs:
   nom_branche_dest: 
     description: 'Le nom de la branche'

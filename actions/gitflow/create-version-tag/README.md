@@ -30,7 +30,7 @@ on:
       - release/*
       - hotfix/*
       - main
-      - develop
+      - dev
 jobs:
   get_semver_version:
     name: Calculer la version et appliquer le tag

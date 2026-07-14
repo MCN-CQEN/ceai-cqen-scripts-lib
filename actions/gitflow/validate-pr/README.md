@@ -1,6 +1,6 @@
 # But
 
-Cette action permet d'accepter ou de refuser un merge vers les branches "main" et "develop".
+Cette action permet d'accepter ou de refuser un merge vers les branches "main" et "dev".
 
 L'idée est de pouvoir renforcer, dans le contexte du GitFlow, quels branches peuvent être fusionnées vers les branches permanentes.
 
@@ -44,7 +44,7 @@ Objet définissant les contraintes de fusion de branche par branche de destinati
     "restriction_branche": "^feature/"
   }, 
   {
-    "dest": "develop", v
+    "dest": "dev",
     "restriction_branche": "^hotfix/"
   }
 ]
@@ -55,19 +55,19 @@ Objet définissant les contraintes de fusion de branche par branche de destinati
 # Exemple d'utilisation
 
 ```yaml
-name: Validation du PR sur main ou develop
+name: Validation du PR sur main ou dev
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
 jobs:
-  gitflow_on_pr_main_or_develop:
+  gitflow_on_pr_main_or_dev:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         id: checkout
         uses: actions/checkout@v7.0.0
         
-      - name: Validation du PR sur main ou develop
+      - name: Validation du PR sur main ou dev
         id: gitflow_on_pr
         uses: ./actions/validate-pr
         with:
