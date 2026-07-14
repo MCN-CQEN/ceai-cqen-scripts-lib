@@ -141,6 +141,68 @@ runs:
             echo "container_path=" >> "$GITHUB_OUTPUT"
           shell: bash
 
+        - name: Normalize Prisma policy IDs for offline Checkov use
+          id: checkov-policy-ids
+          env:
+            RAW_SKIP_CHECKS: ${{ inputs.checkov_ignore_list }}
+          run: |
+            set -euo pipefail
+
+            normalize_bc_id() {
+              case "$1" in
+                BC_AWS_GENERAL_121) echo CKV_AWS_226 ;;
+                BC_AWS_GENERAL_192) echo CKV2_AWS_57 ;;
+                BC_AWS_GENERAL_225) echo CKV_AWS_313 ;;
+                BC_AWS_GENERAL_244) echo CKV_AWS_341 ;;
+                BC_AWS_GENERAL_31) echo CKV_AWS_79 ;;
+                BC_AWS_GENERAL_49) echo CKV2_AWS_8 ;;
+                BC_AWS_GENERAL_79) echo CKV_AWS_149 ;;
+                BC_AWS_GENERAL_96) echo CKV2_AWS_27 ;;
+                BC_AWS_IAM_56) echo CKV_AWS_109 ;;
+                BC_AWS_IAM_57) echo CKV_AWS_111 ;;
+                BC_AWS_IAM_66) echo CKV_AWS_162 ;;
+                BC_AWS_IAM_89) echo CKV_AWS_356 ;;
+                BC_AWS_KUBERNETES_1) echo CKV_AWS_38 ;;
+                BC_AWS_KUBERNETES_2) echo CKV_AWS_39 ;;
+                BC_AWS_KUBERNETES_3) echo CKV_AWS_58 ;;
+                BC_AWS_KUBERNETES_4) echo CKV_AWS_37 ;;
+                BC_AWS_LOGGING_25) echo CKV_AWS_124 ;;
+                BC_AWS_LOGGING_46) echo CKV_AWS_338 ;;
+                BC_AWS_NETWORKING_51) echo CKV2_AWS_5 ;;
+                BC_CROSS_1) echo CKV_TF_1 ;;
+                BC_CROSS_2) echo CKV_TF_2 ;;
+                *) return 1 ;;
+              esac
+            }
+
+            IFS=',' read -ra requested_checks <<< "$RAW_SKIP_CHECKS"
+            normalized_checks=()
+            has_unknown_bc_id=false
+
+            for check in "${requested_checks[@]}"; do
+              check="${check//[[:space:]]/}"
+              [[ -z "$check" ]] && continue
+
+              if normalized_check="$(normalize_bc_id "$check")"; then
+                echo "Normalisation Checkov: $check -> $normalized_check"
+                normalized_checks+=("$normalized_check")
+              else
+                normalized_checks+=("$check")
+                [[ "$check" == BC_* ]] && has_unknown_bc_id=true
+              fi
+            done
+
+            normalized_csv="$(IFS=,; echo "${normalized_checks[*]}")"
+            echo "skip_checks=$normalized_csv" >> "$GITHUB_OUTPUT"
+
+            if [[ "$has_unknown_bc_id" == true ]]; then
+              echo "::warning::Un identifiant BC_* sans correspondance locale a été fourni; Checkov tentera de télécharger le mapping Prisma."
+              echo "skip_download=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "skip_download=true" >> "$GITHUB_OUTPUT"
+            fi
+          shell: bash
+
         - name: Checkov scan
           # This step uses the Checkov GitHub Action to scan Terraform code for security issues.
           id: checkov
@@ -152,7 +214,8 @@ runs:
           with:
             framework: terraform
             directory: ${{ inputs.working_directory }}
-            skip_check: ${{ inputs.checkov_ignore_list }}
+            skip_check: ${{ steps.checkov-policy-ids.outputs.skip_checks }}
+            skip_download: ${{ steps.checkov-policy-ids.outputs.skip_download }}
             output_format: json
             download_external_modules: true
 

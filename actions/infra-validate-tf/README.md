@@ -113,6 +113,7 @@ jobs:
     - Analyse les modules Terraform
     - Possibilité d’ignorer certains checks via checkov_ignore_list
     - Combine le bundle CA système et les certificats configurés sur le runner (`NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`, `REQUESTS_CA_BUNDLE`, `CURL_CA_BUNDLE` ou Git) afin de prendre en charge les proxys d’entreprise
+    - Convertit les identifiants Prisma `BC_*` connus en identifiants Checkov `CKV_*` et désactive les téléchargements Prisma lorsque le scan peut fonctionner entièrement hors ligne
 
 ## Prérequis
 - Un bucket S3 existant pour stocker l’état Terraform
