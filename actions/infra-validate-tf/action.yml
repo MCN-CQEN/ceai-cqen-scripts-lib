@@ -93,23 +93,49 @@ runs:
           run: |
             set -euo pipefail
 
-            candidates=()
-            if [[ -n "$CONFIGURED_CA_BUNDLE" ]]; then
-              candidates+=("$CONFIGURED_CA_BUNDLE")
-            fi
-            candidates+=(
+            system_candidates=(
               /etc/ssl/certs/ca-certificates.crt
               /etc/pki/tls/certs/ca-bundle.crt
+              /etc/ssl/cert.pem
+              /var/lib/ca-certificates/ca-bundle.pem
             )
+            extra_candidates=(
+              "$CONFIGURED_CA_BUNDLE"
+              "${NODE_EXTRA_CA_CERTS:-}"
+              "${SSL_CERT_FILE:-}"
+              "${REQUESTS_CA_BUNDLE:-}"
+              "${CURL_CA_BUNDLE:-}"
+              "$(git config --global --get http.sslCAInfo 2>/dev/null || true)"
+            )
+            destination="$RUNNER_TEMP/checkov-ca-bundle.crt"
+            bundle_created=false
 
-            for candidate in "${candidates[@]}"; do
+            for candidate in "${system_candidates[@]}"; do
               if [[ -r "$candidate" ]]; then
-                cp "$candidate" "$RUNNER_TEMP/checkov-ca-bundle.crt"
-                echo "container_path=/github/runner_temp/checkov-ca-bundle.crt" >> "$GITHUB_OUTPUT"
-                echo "Bundle CA transmis à Checkov depuis: $candidate"
-                exit 0
+                cp "$candidate" "$destination"
+                bundle_created=true
+                echo "Bundle CA système détecté: $candidate"
+                break
               fi
             done
+
+            for candidate in "${extra_candidates[@]}"; do
+              if [[ -n "$candidate" && -r "$candidate" ]]; then
+                if [[ "$bundle_created" == true ]]; then
+                  printf '\n' >> "$destination"
+                  cat "$candidate" >> "$destination"
+                else
+                  cp "$candidate" "$destination"
+                  bundle_created=true
+                fi
+                echo "Certificats CA supplémentaires détectés: $candidate"
+              fi
+            done
+
+            if [[ "$bundle_created" == true ]]; then
+              echo "container_path=/github/runner_temp/checkov-ca-bundle.crt" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
 
             echo "::warning::Aucun bundle CA compatible trouvé; Checkov utilisera son magasin de certificats par défaut."
             echo "container_path=" >> "$GITHUB_OUTPUT"

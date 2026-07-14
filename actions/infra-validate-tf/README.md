@@ -112,7 +112,7 @@ jobs:
     - Utilise bridgecrewio/checkov-action@master
     - Analyse les modules Terraform
     - Possibilité d’ignorer certains checks via checkov_ignore_list
-    - Réutilise le bundle CA du runner dans le conteneur Checkov afin de prendre en charge les autorités de certification d’entreprise
+    - Combine le bundle CA système et les certificats configurés sur le runner (`NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`, `REQUESTS_CA_BUNDLE`, `CURL_CA_BUNDLE` ou Git) afin de prendre en charge les proxys d’entreprise
 
 ## Prérequis
 - Un bucket S3 existant pour stocker l’état Terraform
