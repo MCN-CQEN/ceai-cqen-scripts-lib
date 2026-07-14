@@ -52,7 +52,7 @@ jobs:
       contents: write 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7.0.0
 
     # Utilisation de l'action 'get-semver' ici :
     - name: Obtenir version

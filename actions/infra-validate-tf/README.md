@@ -81,14 +81,14 @@ jobs:
 ## Détails du fonctionnement
 
 1. Checkout du code
-    - Utilise actions/checkout@v4
+    - Utilise actions/checkout@v7.0.0
     - Récupère tout l’historique (fetch-depth: 0) pour certains modules Terraform
 2. Configuration AWS
-    - Utilise aws-actions/configure-aws-credentials@v4
+    - Utilise aws-actions/configure-aws-credentials@v6.2.2
     - Assume le rôle IAM spécifié (role_to_assume)
     - Le runner peut ensuite effectuer des actions AWS sécurisées
 3. Installation de Terraform
-    - Utilise hashicorp/setup-terraform@v3
+    - Utilise hashicorp/setup-terraform@v4.0.1
     - Permet d’utiliser la version définie dans .terraform-version ou dans le workflow appelant
 4. Formatage Terraform
     

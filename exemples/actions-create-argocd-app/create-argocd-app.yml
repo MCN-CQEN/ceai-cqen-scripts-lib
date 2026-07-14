@@ -24,7 +24,7 @@ jobs:
     environment: "dev"    
     name: A job to call the create argocd app script
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.0
         with:
           ref: "dev"
 
@@ -70,4 +70,3 @@ jobs:
             app_manifest_repo_branch: ${{ vars.APP_MANIFEST_REPO_BRANCH }}
             app_manifest_path: ${{ vars.APP_MANIFEST_PATH }}
             helm_params: "${{ env.HELM_PARAMS }}"
-

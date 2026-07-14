@@ -129,8 +129,8 @@ jobs:
 * GitHub Actions
 * Action officielle :
 
-  * `aws-actions/configure-aws-credentials@v4`
-  * `actions/checkout@v3`
+  * `aws-actions/configure-aws-credentials@v6.2.2`
+  * `actions/checkout@v7.0.0`
 
 ---
 
@@ -158,4 +158,3 @@ jobs:
 ## 👥 Contributeurs
 
 * Votre équipe DevOps 🚀
-
