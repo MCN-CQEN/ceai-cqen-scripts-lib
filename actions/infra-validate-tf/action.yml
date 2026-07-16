@@ -108,7 +108,7 @@ runs:
         - name: Checkov scan
           # This step uses the Checkov GitHub Action to scan Terraform code for security issues.
           id: checkov
-          uses: bridgecrewio/checkov-action@7b972723c44fb3d256283fac96fae5d7c1894bb7
+          uses: bridgecrewio/checkov-action@7b972723c44fb3d256283fac96fae5d7c1894bb7 # v12.3114.0
           env:
             BC_CA_BUNDLE: ${{ steps.checkov-ca.outputs.container_path }}
             REQUESTS_CA_BUNDLE: ${{ steps.checkov-ca.outputs.container_path }}
