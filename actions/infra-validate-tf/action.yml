@@ -32,10 +32,6 @@ inputs:
       description: "Liste des vérifications Checkov à ignorer, séparées par des virgules. Par exemple: 'BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149'"
       required: false
       default: "BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149"  # Example of checks to ignore
-    checkov_ca_bundle:
-      description: "Chemin facultatif vers le bundle CA du runner à transmettre au conteneur Checkov"
-      required: false
-      default: "/etc/ssl/certs/ca-certificates.crt"
 outputs:
     terraform_validate:
         description: "Terraform validate output"
@@ -86,40 +82,13 @@ runs:
           run: terraform validate
           shell: bash
 
-        - name: Prepare trusted CA bundle for Checkov
-          id: checkov-ca
-          env:
-            SOURCE_CA_BUNDLE: ${{ inputs.checkov_ca_bundle }}
-          run: |
-            set -euo pipefail
-
-            destination="${GITHUB_WORKSPACE}/.checkov-ca-bundle.crt"
-
-            if [[ -n "${SOURCE_CA_BUNDLE}" && -r "${SOURCE_CA_BUNDLE}" ]]; then
-              cp "${SOURCE_CA_BUNDLE}" "${destination}"
-              echo "container_path=/github/workspace/.checkov-ca-bundle.crt" >> "${GITHUB_OUTPUT}"
-              echo "Bundle CA transmis à Checkov depuis ${SOURCE_CA_BUNDLE}."
-            else
-              echo "::warning::Bundle CA Checkov introuvable ou illisible: ${SOURCE_CA_BUNDLE:-<vide>}"
-              echo "container_path=" >> "${GITHUB_OUTPUT}"
-            fi
-          shell: bash
-
         - name: Checkov scan
           # This step uses the Checkov GitHub Action to scan Terraform code for security issues.
           id: checkov
-          uses: bridgecrewio/checkov-action@7b972723c44fb3d256283fac96fae5d7c1894bb7
-          env:
-            BC_CA_BUNDLE: ${{ steps.checkov-ca.outputs.container_path }}
-            REQUESTS_CA_BUNDLE: ${{ steps.checkov-ca.outputs.container_path }}
+          uses: bridgecrewio/checkov-action@master        
           with:
             framework: terraform
             directory: ${{ inputs.working_directory }}
             skip_check: ${{ inputs.checkov_ignore_list }}
             output_format: json
             download_external_modules: true
-
-        - name: Remove temporary Checkov CA bundle
-          if: always()
-          run: rm -f "${GITHUB_WORKSPACE}/.checkov-ca-bundle.crt"
-          shell: bash
