@@ -58,7 +58,7 @@ runs:
             ENVIRONMENT_NAME="release-v1"
             ;;
 
-          dev|feature/*)
+          dev|feature|feature/*)
             RUNNER_ENV="release-v1"
             ENVIRONMENT_NAME="${BRANCH_REF}"
             ;;
