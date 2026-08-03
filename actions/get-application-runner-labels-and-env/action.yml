@@ -1,0 +1,82 @@
+name: "Obtenir les étiquettes du runner pour les applications"
+
+description: >-
+  Obtenir les étiquettes du runner pour les applications selon
+  la branche de travail et le système (cqen ou mcn).
+
+inputs:
+  app_branch_ref:
+    description: "Branche de travail de l'application"
+    required: true
+
+  runner_system:
+    description: "Système du runner : cqen ou mcn"
+    required: true
+
+outputs:
+  runner_labels:
+    description: "Liste JSON des étiquettes du runner"
+    value: ${{ steps.runner_labels_and_env.outputs.runner_labels }}
+
+  app_env:
+    description: "Environnement de travail de l'application"
+    value: ${{ steps.runner_labels_and_env.outputs.environment_name }}
+
+runs:
+  using: composite
+
+  steps:
+    - name: "Déterminer les étiquettes du runner"
+      id: runner_labels_and_env
+      shell: bash
+      env:
+        BRANCH_REF: ${{ inputs.app_branch_ref }}
+        RUNNER_SYSTEM: ${{ inputs.runner_system }}
+      run: |
+        set -euo pipefail
+
+        echo "Branch ref: ${BRANCH_REF}"
+        echo "System: ${RUNNER_SYSTEM}"
+
+        case "${RUNNER_SYSTEM}" in
+          cqen|mcn)
+            ;;
+          *)
+            echo "Unsupported runner system: ${RUNNER_SYSTEM}" >&2
+            exit 1
+            ;;
+        esac
+
+        case "${BRANCH_REF}" in
+          main)
+            RUNNER_ENV="main"
+            ENVIRONMENT_NAME="main"
+            ;;
+
+          release/v1)
+            RUNNER_ENV="release-v1"
+            ENVIRONMENT_NAME="release-v1"
+            ;;
+
+          dev|feature|feature/*)
+            RUNNER_ENV="release-v1"
+            ENVIRONMENT_NAME="${BRANCH_REF}"
+            ;;
+
+          *)
+            echo "Unsupported application branch: ${BRANCH_REF}" >&2
+            exit 1
+            ;;
+        esac
+
+        RUNNER_LABELS="$(
+          printf '["self-hosted","%s","%s"]' \
+            "${RUNNER_ENV}" \
+            "${RUNNER_SYSTEM}"
+        )"
+
+        echo "Runner labels: ${RUNNER_LABELS}"
+        echo "Application environment: ${ENVIRONMENT_NAME}"
+
+        echo "runner_labels=${RUNNER_LABELS}" >> "${GITHUB_OUTPUT}"
+        echo "environment_name=${ENVIRONMENT_NAME}" >> "${GITHUB_OUTPUT}"
