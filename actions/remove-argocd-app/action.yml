@@ -92,7 +92,7 @@ runs:
       if: steps.check_project.outputs.project_exists == 'true'
       shell: bash
       run: |
-        set -e
+        set -euo pipefail
 
         APP_NAME="${{ inputs.app_name }}"
         APP_DEST_NAMESPACE="${{ inputs.app_dest_namespace }}"
@@ -102,7 +102,13 @@ runs:
         
         echo "Vérification de l'existence de l'application Argo CD : $APP_LABEL"
 
-        if APP_GET_OUTPUT="$(argocd app get "$APP_NAME" --grpc-web 2>&1)" ; then
+        # allow the `argocd app get` to fail without terminating the whole script
+        set +e
+        APP_GET_OUTPUT="$(argocd app get "$APP_NAME" --grpc-web 2>&1)"
+        APP_GET_EXIT=$?
+        set -e
+
+        if [ $APP_GET_EXIT -eq 0 ]; then
           printf '%s\n' "$APP_GET_OUTPUT"
           echo "Application '$APP_LABEL' trouvée. Suppression en cours ..."
 
@@ -117,22 +123,22 @@ runs:
               --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":Delete=true}}}' \
               --patch-type application/merge-patch+json \
               --grpc-web || true
-
           fi
 
-          argocd app delete "$APP_NAME" \
-            --cascade --yes --grpc-web
-
+          # attempt deletion; propagate a real delete failure
+          argocd app delete "$APP_NAME" --cascade --yes --grpc-web
           echo "Application '$APP_LABEL' supprimée avec succès"
         else
-          APP_GET_STATUS=$?
+          # Print argocd output for debugging
           printf '%s\n' "$APP_GET_OUTPUT"
 
+          # If output indicates the app doesn't exist, succeed gracefully
           if printf '%s\n' "$APP_GET_OUTPUT" | grep -Eiq "code = NotFound|not found|does not exist|n.existe pas"; then
             echo "Application '$APP_LABEL' n'existe pas. Rien à supprimer."
             exit 0
           fi
 
+          # Otherwise treat as a real error
           echo "::error::Impossible de lire l'application Argo CD '$APP_LABEL'."
-          exit "$APP_GET_STATUS"
+          exit $APP_GET_EXIT
         fi
