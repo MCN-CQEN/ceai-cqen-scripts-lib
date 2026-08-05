@@ -122,7 +122,7 @@ runs:
               --kind PersistentVolumeClaim \
               --namespace "$APP_DEST_NAMESPACE" \
               --all \
-              --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":Delete=true}}}' \
+              --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":"Delete=true"}}}' \
               --patch-type application/merge-patch+json \
               --grpc-web || true
           fi
@@ -144,7 +144,7 @@ runs:
           if printf '%s\n' "$APP_GET_OUTPUT" | grep -Eiq "code = PermissionDenied|permission denied|PermissionDenied"; then
             echo "::error::Permission denied while reading Argo CD application '$APP_LABEL'."
             echo "Vérifiez :"
-            echo "  - Les identifiants ($$ARGOCD_USERNAME) / token fournis sont corrects"
+            echo "  - Les identifiants ($ARGOCD_USERNAME) / token fournis sont corrects"
             echo "  - Le compte a les droits RBAC nécessaires pour lire/effacer l'application (applications.get / applications.delete)"
             echo "  - La configuration du serveur argocd (TLS / grpc-web / --insecure) est correcte"
             echo "Exemple: retenter 'argocd login' puis 'argocd app get $APP_NAME' localement pour reproduire."
