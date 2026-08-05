@@ -138,6 +138,17 @@ runs:
             exit 0
           fi
 
+          # If output indicates permission issues, fail with an actionable message
+          if printf '%s\n' "$APP_GET_OUTPUT" | grep -Eiq "code = PermissionDenied|permission denied|PermissionDenied"; then
+            echo "::error::Permission denied while reading Argo CD application '$APP_LABEL'."
+            echo "Vérifiez :"
+            echo "  - Les identifiants (${ { inputs.argocd_username }}) / token fournis sont corrects"
+            echo "  - Le compte a les droits RBAC nécessaires pour lire/effacer l'application (applications.get / applications.delete)"
+            echo "  - La configuration du serveur argocd (TLS / grpc-web / --insecure) est correcte"
+            echo "Exemple: retenter 'argocd login' puis 'argocd app get $APP_NAME' localement pour reproduire."
+            exit 2
+          fi
+
           # Otherwise treat as a real error
           echo "::error::Impossible de lire l'application Argo CD '$APP_LABEL'."
           exit $APP_GET_EXIT
