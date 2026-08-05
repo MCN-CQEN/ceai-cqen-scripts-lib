@@ -98,12 +98,14 @@ runs:
         APP_DEST_NAMESPACE="${{ inputs.app_dest_namespace }}"
         APP_PROJECT="${{ inputs.app_project_name }}"
         DELETE_PVC="${{ inputs.delete_persistent_volume_claims }}"
+        ARGOCD_USERNAME="${{ inputs.argocd_username }}"
         APP_LABEL="$APP_NAME"
         
         echo "Vérification de l'existence de l'application Argo CD : $APP_LABEL"
 
         # allow the `argocd app get` to fail without terminating the whole script
         set +e
+        APP_GET_STATUS=0
         APP_GET_OUTPUT="$(argocd app get "$APP_NAME" --grpc-web 2>&1)" || APP_GET_STATUS=$?
         APP_GET_STATUS=${APP_GET_STATUS:-0}
         set -e
@@ -142,7 +144,7 @@ runs:
           if printf '%s\n' "$APP_GET_OUTPUT" | grep -Eiq "code = PermissionDenied|permission denied|PermissionDenied"; then
             echo "::error::Permission denied while reading Argo CD application '$APP_LABEL'."
             echo "Vérifiez :"
-            echo "  - Les identifiants (${ { inputs.argocd_username }}) / token fournis sont corrects"
+            echo "  - Les identifiants ($$ARGOCD_USERNAME) / token fournis sont corrects"
             echo "  - Le compte a les droits RBAC nécessaires pour lire/effacer l'application (applications.get / applications.delete)"
             echo "  - La configuration du serveur argocd (TLS / grpc-web / --insecure) est correcte"
             echo "Exemple: retenter 'argocd login' puis 'argocd app get $APP_NAME' localement pour reproduire."
@@ -151,5 +153,5 @@ runs:
 
           # Otherwise treat as a real error
           echo "::error::Impossible de lire l'application Argo CD '$APP_LABEL'."
-          exit $APP_GET_EXIT
+          exit $APP_GET_STATUS
         fi
