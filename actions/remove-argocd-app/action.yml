@@ -79,30 +79,38 @@ runs:
           echo "project_exists=false" >> $GITHUB_OUTPUT
         fi 
     
-    - name: Quitter si le projet n'existe pas
+    - name: Print résultat de la vérification si le projet existe
       shell: bash
       run: |
         if ${{steps.check_project.outputs.project_exists == 'false'}}; then
           echo "Projet ${{inputs.app_project_name}} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
-          exit 0
         else
           echo "Project ${{inputs.app_project_name}} exists, will continue"
         fi
 
     - name: Check if Argo CD application exists and remove if exists
+      if: steps.check_project.outputs.project_exists == 'true'
       shell: bash
       run: |
-        set -e
+        set -euo pipefail
 
         APP_NAME="${{ inputs.app_name }}"
         APP_DEST_NAMESPACE="${{ inputs.app_dest_namespace }}"
         APP_PROJECT="${{ inputs.app_project_name }}"
         DELETE_PVC="${{ inputs.delete_persistent_volume_claims }}"
+        ARGOCD_USERNAME="${{ inputs.argocd_username }}"
         APP_LABEL="$APP_NAME"
         
         echo "Vérification de l'existence de l'application Argo CD : $APP_LABEL"
 
-        if APP_GET_OUTPUT="$(argocd app get "$APP_NAME" --grpc-web 2>&1)" ; then
+        # allow the `argocd app get` to fail without terminating the whole script
+        set +e
+        APP_GET_STATUS=0
+        APP_GET_OUTPUT="$(argocd app get "$APP_NAME" --grpc-web 2>&1)" || APP_GET_STATUS=$?
+        APP_GET_STATUS=${APP_GET_STATUS:-0}
+        set -e
+
+        if [ $APP_GET_STATUS -eq 0 ]; then
           printf '%s\n' "$APP_GET_OUTPUT"
           echo "Application '$APP_LABEL' trouvée. Suppression en cours ..."
 
@@ -114,25 +122,36 @@ runs:
               --kind PersistentVolumeClaim \
               --namespace "$APP_DEST_NAMESPACE" \
               --all \
-              --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":null}}}' \
+              --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":Delete=true}}}' \
               --patch-type application/merge-patch+json \
               --grpc-web || true
-
           fi
 
-          argocd app delete "$APP_NAME" \
-            --cascade --yes --grpc-web
-
+          # attempt deletion; propagate a real delete failure
+          argocd app delete "$APP_NAME" --cascade --yes --grpc-web
           echo "Application '$APP_LABEL' supprimée avec succès"
         else
-          APP_GET_STATUS=$?
+          # Print argocd output for debugging
           printf '%s\n' "$APP_GET_OUTPUT"
 
+          # If output indicates the app doesn't exist, succeed gracefully
           if printf '%s\n' "$APP_GET_OUTPUT" | grep -Eiq "code = NotFound|not found|does not exist|n.existe pas"; then
             echo "Application '$APP_LABEL' n'existe pas. Rien à supprimer."
             exit 0
           fi
 
+          # If output indicates permission issues, fail with an actionable message
+          if printf '%s\n' "$APP_GET_OUTPUT" | grep -Eiq "code = PermissionDenied|permission denied|PermissionDenied"; then
+            echo "::error::Permission denied while reading Argo CD application '$APP_LABEL'."
+            echo "Vérifiez :"
+            echo "  - Les identifiants ($$ARGOCD_USERNAME) / token fournis sont corrects"
+            echo "  - Le compte a les droits RBAC nécessaires pour lire/effacer l'application (applications.get / applications.delete)"
+            echo "  - La configuration du serveur argocd (TLS / grpc-web / --insecure) est correcte"
+            echo "Exemple: retenter 'argocd login' puis 'argocd app get $APP_NAME' localement pour reproduire."
+            exit 2
+          fi
+
+          # Otherwise treat as a real error
           echo "::error::Impossible de lire l'application Argo CD '$APP_LABEL'."
-          exit "$APP_GET_STATUS"
+          exit $APP_GET_STATUS
         fi
