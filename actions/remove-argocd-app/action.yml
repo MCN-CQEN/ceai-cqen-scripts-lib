@@ -104,11 +104,11 @@ runs:
 
         # allow the `argocd app get` to fail without terminating the whole script
         set +e
-        APP_GET_OUTPUT="$(argocd app get "$APP_NAME" /dev/null 2>&1)"
-        APP_GET_EXIT=$?
+        APP_GET_OUTPUT="$(argocd app get "$APP_NAME" --grpc-web 2>&1)" || APP_GET_STATUS=$?
+        APP_GET_STATUS=${APP_GET_STATUS:-0}
         set -e
 
-        if [ $APP_GET_EXIT -eq 0 ]; then
+        if [ $APP_GET_STATUS -eq 0 ]; then
           printf '%s\n' "$APP_GET_OUTPUT"
           echo "Application '$APP_LABEL' trouvée. Suppression en cours ..."
 
