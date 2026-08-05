@@ -79,18 +79,17 @@ runs:
           echo "project_exists=false" >> $GITHUB_OUTPUT
         fi 
     
-    - name: Quitter si le projet n'existe pas
+    - name: Print résultat de la vérification si le projet existe
       shell: bash
       run: |
         if ${{steps.check_project.outputs.project_exists == 'false'}}; then
           echo "Projet ${{inputs.app_project_name}} does not exist, exit workflow. Contactez l'administrateur de projets pour créer le projet"
-          exit 0
         else
           echo "Project ${{inputs.app_project_name}} exists, will continue"
         fi
 
     - name: Check if Argo CD application exists and remove if exists
-      if: steps.check_project.outputs.project_exists_exists == 'true'
+      if: steps.check_project.outputs.project_exists == 'true'
       shell: bash
       run: |
         set -e
@@ -115,7 +114,7 @@ runs:
               --kind PersistentVolumeClaim \
               --namespace "$APP_DEST_NAMESPACE" \
               --all \
-              --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":null}}}' \
+              --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":Delete=true}}}' \
               --patch-type application/merge-patch+json \
               --grpc-web || true
 
