@@ -90,6 +90,7 @@ runs:
         fi
 
     - name: Check if Argo CD application exists and remove if exists
+      if: steps.check_project.outputs.project_exists_exists == 'true'
       shell: bash
       run: |
         set -e
