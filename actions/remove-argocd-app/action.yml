@@ -104,7 +104,7 @@ runs:
 
         # allow the `argocd app get` to fail without terminating the whole script
         set +e
-        APP_GET_OUTPUT="$(argocd app get "$APP_NAME" --grpc-web 2>&1)"
+        APP_GET_OUTPUT="$(argocd app get "$APP_NAME" /dev/null 2>&1)"
         APP_GET_EXIT=$?
         set -e
 
