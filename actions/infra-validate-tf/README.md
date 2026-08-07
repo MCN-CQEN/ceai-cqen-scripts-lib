@@ -44,6 +44,7 @@ Ce workflow est conçu pour être appelé par d’autres workflows sans duplicat
 |bucket_tf_state|Nom du bucket S3 contenant l'état Terraform|✅|-|
 |role_to_assume|Rôle IAM à assumer|✅|-|
 |checkov_ignore_list|Liste des vérifications Checkov à ignorer (séparées par des virgules)|❗|BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149|
+|checkov_ca_bundle|Chemin facultatif vers le bundle CA du runner transmis au conteneur Checkov|❌|/etc/ssl/certs/ca-certificates.crt|
 
 ## Sorties (Outputs)
 
@@ -76,6 +77,7 @@ jobs:
       bucket_tf_state: my-terraform-state-bucket
       role_to_assume: arn:aws:iam::123456789012:role/GitHubActionsTerraformRole
       checkov_ignore_list: "BC_AWS_GENERAL_192,CKV_AWS_149"
+      checkov_ca_bundle: /etc/ssl/certs/ca-certificates.crt
 ```
 
 ## Détails du fonctionnement
@@ -108,9 +110,10 @@ jobs:
     terraform validate
     ```
 7. Analyse de sécurité Checkov
-    - Utilise bridgecrewio/checkov-action@master
+    - Utilise bridgecrewio/checkov-action épinglée à un SHA immuable
     - Analyse les modules Terraform
     - Possibilité d’ignorer certains checks via checkov_ignore_list
+    - Transmet le bundle CA du runner au conteneur avec BC_CA_BUNDLE et REQUESTS_CA_BUNDLE
 
 ## Prérequis
 - Un bucket S3 existant pour stocker l’état Terraform
@@ -122,5 +125,5 @@ jobs:
 
 ## Limitations
 - Ne supporte pas encore la validation pour plusieurs workspaces Terraform (peut être ajouté sur demande)
-- Utilise la branche master de Checkov, ce qui peut entraîner des changements non anticipés
+- Le bundle configuré doit déjà contenir les autorités internes requises; l’action n’installe pas de certificat sur le runner
 - Les secrets ne sont pas transmis via des inputs, mais doivent être dans secrets.* du workflow appelant
