@@ -115,19 +115,31 @@ runs:
           echo "Application '$APP_LABEL' trouvée. Suppression en cours ..."
 
           if [ "$DELETE_PVC" = "true" ]; then
+            echo "Suppression des annotations de préservation pour l'application '$APP_NAME'..."
 
-            echo "Removing preservation annotations from application $APP_NAME..."
-            
-            # Remove sync-policy Preserve (allows cascade deletion of resources like VPCs)
-            argocd app unset $APP_NAME --sync-policy preserve || true
-            
-            # Remove standard ArgoCD resource-keep annotation
-            argocd app patch $APP_NAME --patch '[{"op": "remove", "path": "/metadata/annotations/argocd.argoproj.io~1sync-options"}]' || true
-            
-            # Explicitly overwrite custom or AWS-specific deletion blocks if present
-            argocd app patch $APP_NAME --patch '[{"op": "add", "path": "/metadata/annotations/helm.sh~1resource-policy", "value": "delete"}]' || true      
+            # Tentative via ArgoCD (merge-patch idempotent — met la valeur à null si présente)
+            if argocd app patch-resource "$APP_NAME" \
+                --project "$APP_PROJECT" \
+                --kind PersistentVolumeClaim \
+                --namespace "$APP_DEST_NAMESPACE" \
+                --all \
+                --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":null}}}' \
+                --patch-type application/merge-patch+json \
+                --grpc-web; then
+              echo "Annotations mises à jour via argocd."
+            else
+              echo "argocd patch-resource a échoué — tentative de fallback via kubectl (suppression d'annotations)..."
+              # Supprime les annotations si présentes (syntax: key- supprime l'annotation)
+              kubectl -n "$APP_DEST_NAMESPACE" annotate pvc -l app.kubernetes.io/instance="$APP_NAME" helm.sh/resource-policy- argocd.argoproj.io/sync-options- --overwrite || true
+              echo "Fallback kubectl terminé (annotations supprimées si elles existaient)."
+            fi
 
-            echo "Suppression explicite des PVC de l'application '$APP_LABEL' dans le namespace Kubernetes '$APP_DEST_NAMESPACE' ..."
+            # Forcer une actualisation Argo CD pour prendre en compte la modification avant suppression
+            echo "Forcer un refresh ArgoCD de l'application..."
+            argocd app refresh "$APP_NAME" --grpc-web || true
+
+            # (Optionnel) attente courte pour laisser le refresh se propager
+            sleep 2
 
           fi
 
