@@ -115,20 +115,21 @@ runs:
           echo "Application '$APP_LABEL' trouvée. Suppression en cours ..."
 
           if [ "$DELETE_PVC" = "true" ]; then
+
+            echo "Removing preservation annotations from application $APP_NAME..."
+            
+            # Remove sync-policy Preserve (allows cascade deletion of resources like VPCs)
+            argocd app unset $APP_NAME --sync-policy preserve || true
+            
+            # Remove standard ArgoCD resource-keep annotation
+            argocd app patch $APP_NAME --patch '[{"op": "remove", "path": "/metadata/annotations/argocd.argoproj.io~1sync-options"}]' || true
+            
+            # Explicitly overwrite custom or AWS-specific deletion blocks if present
+            argocd app patch $APP_NAME --patch '[{"op": "add", "path": "/metadata/annotations/helm.sh~1resource-policy", "value": "delete"}]' || true      
+
             echo "Suppression explicite des PVC de l'application '$APP_LABEL' dans le namespace Kubernetes '$APP_DEST_NAMESPACE' ..."
 
-            argocd app patch-resource "$APP_NAME" \
-              --project "$APP_PROJECT" \
-              --kind PersistentVolumeClaim \
-              --namespace "$APP_DEST_NAMESPACE" \
-              --all \
-              --patch '{"metadata":{"annotations":{"helm.sh/resource-policy":null,"argocd.argoproj.io/sync-options":null}}}' \
-              --patch-type application/merge-patch+json \
-              --grpc-web || true
           fi
-
-          # force Argo CD to refresh before delete:
-          argocd app refresh "$APP_NAME" --grpc-web
 
           # attempt deletion; propagate a real delete failure
           argocd app delete "$APP_NAME" --cascade --yes --grpc-web
