@@ -66,17 +66,17 @@ jobs:
 
 2. Connexion au registre de conteneurs
 
-    Connexion via docker/login-action@v3 avec le token GitHub fourni.
+    Connexion via docker/login-action@v4 avec le token GitHub fourni.
 
 3. Extraction des métadonnées
 
-    docker/metadata-action@v5 génère automatiquement :
+    docker/metadata-action@v6 génère automatiquement :
     - les tags (par ex. latest, SHA, tags Git…)
     - les labels OCI
 
 4. Build et push de l’image Docker
 
-    docker/build-push-action@v6 :
+    docker/build-push-action@v7 :
     - construit l’image à partir du contexte .
     - applique les tags et labels générés
     - pousse l’image vers le registre
@@ -84,7 +84,7 @@ jobs:
 5. Attestation de build (provenance)
 
     Uniquement si le dépôt est public.
-    Utilise actions/attest-build-provenance@v2 pour produire un certificat attaché à l’image.
+    Utilise actions/attest-build-provenance@v4 pour produire un certificat attaché à l’image.
 
 ## Prérequis
 

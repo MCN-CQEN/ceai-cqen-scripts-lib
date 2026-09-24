@@ -26,13 +26,13 @@ runs:
       fetch-depth: 0
 
   - name: Setup GitVersion
-    uses: gittools/actions/gitversion/setup@v1.1.1
+    uses: gittools/actions/gitversion/setup@v4
     with:
       versionSpec: '6.0.x' # TODO : On ne peut pas monter à >= 6.1.x, probablement à cause de la version de Node.js. À ajuster
   
   - name: Determine Version
     id: gitversion 
-    uses: gittools/actions/gitversion/execute@v1.1.1
+    uses: gittools/actions/gitversion/execute@v4
 
   - name: Préparer le path github pour la prochaine étape
     run: echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
