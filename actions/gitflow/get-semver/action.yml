@@ -28,7 +28,7 @@ runs:
   - name: Setup GitVersion
     uses: gittools/actions/gitversion/setup@v4
     with:
-      versionSpec: '6.0.x' # TODO : On ne peut pas monter à >= 6.1.x, probablement à cause de la version de Node.js. À ajuster
+      versionSpec: '6.2.x' # Version minimale compatible avec GitTools/actions v4.7 (Node.js 24)
   
   - name: Determine Version
     id: gitversion 
