@@ -44,6 +44,7 @@ Ce workflow est conçu pour être appelé par d’autres workflows sans duplicat
 |bucket_tf_state|Nom du bucket S3 contenant l'état Terraform|✅|-|
 |role_to_assume|Rôle IAM à assumer|✅|-|
 |checkov_ignore_list|Liste des vérifications Checkov à ignorer (séparées par des virgules)|❗|BC_CROSS_1,BC_CROSS_2,BC_AWS_GENERAL_192,CKV_AWS_149|
+|checkov_ca_bundle|Chemin facultatif vers un bundle CA présent sur le runner|❌|Détection automatique|
 
 ## Sorties (Outputs)
 
@@ -111,12 +112,15 @@ jobs:
     - Utilise bridgecrewio/checkov-action@master
     - Analyse les modules Terraform
     - Possibilité d’ignorer certains checks via checkov_ignore_list
+    - Combine le bundle CA système et les certificats configurés sur le runner afin de prendre en charge les proxys d’entreprise
+    - Convertit les identifiants Prisma `BC_*` connus en identifiants Checkov `CKV_*` et désactive les téléchargements Prisma lorsque le scan peut fonctionner entièrement hors ligne
 
 ## Prérequis
 - Un bucket S3 existant pour stocker l’état Terraform
 - Un rôle IAM permettant les actions suivantes :
     - sts:AssumeRole
     - Permissions nécessaires à l’init Terraform (S3, DynamoDB si lock)
+- Facultatif : un bundle CA système ou un chemin fourni avec `checkov_ca_bundle`
 - Le code Terraform doit être valide dans le répertoire fourni
 - Le workflow appelant doit utiliser un runner compatible (Linux recommandé)
 
