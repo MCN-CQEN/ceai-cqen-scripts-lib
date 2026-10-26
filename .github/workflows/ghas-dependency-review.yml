@@ -1,0 +1,30 @@
+name: Reusable GHAS - Dependency Review
+
+on:
+  workflow_call:
+    inputs:
+      fail-on-severity:
+        description: Minimum vulnerability severity that fails the check.
+        required: false
+        default: low
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: ${{ inputs.fail-on-severity }}

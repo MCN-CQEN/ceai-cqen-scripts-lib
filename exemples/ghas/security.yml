@@ -1,0 +1,35 @@
+name: GHAS - Security checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - dev
+      - main
+  schedule:
+    - cron: '34 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghas-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    if: ${{ vars.CODEQL_ENABLED == 'true' }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: MCN-CQEN/ceai-cqen-scripts-lib/.github/workflows/ghas-codeql.yml@feature/ghas-toolkit
+    with:
+      languages: '["actions", "python"]'
+
+  dependency-review:
+    if: ${{ github.event_name == 'pull_request' && vars.DEPENDENCY_REVIEW_ENABLED == 'true' }}
+    uses: MCN-CQEN/ceai-cqen-scripts-lib/.github/workflows/ghas-dependency-review.yml@feature/ghas-toolkit
+    with:
+      fail-on-severity: low
