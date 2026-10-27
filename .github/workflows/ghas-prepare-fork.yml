@@ -1,0 +1,104 @@
+name: GHAS - Prepare existing fork
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repository:
+        description: Existing fork to inspect (OWNER/REPO).
+        required: true
+        default: MCN-CQEN/ceai-cqen-labinfra-cluster-ghas
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghas-prepare-${{ inputs.target_repository }}
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Verify GitHub App and fork settings (read-only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Validate target and central credentials
+        id: target
+        uses: actions/github-script@v9
+        env:
+          TARGET_REPOSITORY: ${{ inputs.target_repository }}
+          GHAS_APP_ID: ${{ vars.GHAS_APP_ID }}
+          GHAS_APP_PRIVATE_KEY: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+        with:
+          script: |
+            const target = process.env.TARGET_REPOSITORY.trim();
+            if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target)) {
+              throw new Error('Use OWNER/REPO for the target repository.');
+            }
+            const [owner, repo] = target.split('/');
+            if (owner.toLowerCase() !== context.repo.owner.toLowerCase()) {
+              throw new Error('The target must belong to the library organization.');
+            }
+            if (repo.toLowerCase() === context.repo.repo.toLowerCase()) {
+              throw new Error('The library cannot be the target.');
+            }
+            if (!process.env.GHAS_APP_ID || !process.env.GHAS_APP_PRIVATE_KEY) {
+              throw new Error('Configure GHAS_APP_ID (variable) and GHAS_APP_PRIVATE_KEY (secret) in the library.');
+            }
+            core.setOutput('owner', owner);
+            core.setOutput('repo', repo);
+
+      - name: Create read-only token scoped to the target
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repo }}
+          permission-administration: read
+          permission-contents: read
+
+      - name: Inspect fork and report security settings
+        uses: actions/github-script@v9
+        env:
+          TARGET_OWNER: ${{ steps.target.outputs.owner }}
+          TARGET_REPO: ${{ steps.target.outputs.repo }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const { data: repo } = await github.rest.repos.get({
+              owner: process.env.TARGET_OWNER,
+              repo: process.env.TARGET_REPO
+            });
+            if (!repo.fork || !repo.parent) {
+              throw new Error('The target is not a GitHub fork. No changes were made.');
+            }
+            const security = repo.security_and_analysis || {};
+            const status = (key) => security[key]?.status || 'not reported';
+            const ghasEnabled = security.advanced_security?.status === 'enabled';
+            const codeEnabled = ghasEnabled || security.code_security?.status === 'enabled';
+            await core.summary
+              .addHeading('GHAS fork inspection')
+              .addTable([
+                [{ data: 'Check', header: true }, { data: 'Result', header: true }],
+                ['Target', repo.full_name],
+                ['Default branch', repo.default_branch],
+                ['GitHub fork', 'yes'],
+                ['Visibility', repo.visibility],
+                ['Advanced Security', status('advanced_security')],
+                ['Code Security', status('code_security')],
+                ['Secret scanning', status('secret_scanning')],
+                ['Push protection', status('secret_scanning_push_protection')],
+                ['Changes made', 'none']
+              ])
+              .addRaw('\nAuthentication and target access verified. This does not prove write permissions, license availability, dependency graph availability or successful scans.\n')
+              .write();
+            if (!codeEnabled && !repo.private) {
+              core.notice('No explicit Code Security enablement reported. Check repository eligibility and policy.');
+            } else if (!codeEnabled) {
+              core.warning('Code Security enablement was not confirmed. Check settings, licenses and enterprise policy.');
+            }
+            if (!Object.keys(security).length) {
+              core.warning('Security settings were not returned. Do not interpret missing settings as disabled.');
+            }

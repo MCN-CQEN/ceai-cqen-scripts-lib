@@ -23,9 +23,8 @@ Un controle obligatoire doit etre configure separement dans les regles de branch
 ## Essai dans le fork
 
 1. Publier la branche `feature/ghas-toolkit` de la bibliotheque.
-2. Dans les reglages de la bibliotheque privee, autoriser son utilisation depuis
-   les depots de l'organisation : `Settings > Actions > General > Access`.
-   Verifier aussi que les politiques Actions du fork autorisent ces workflows.
+2. La bibliotheque est publique : aucun partage de workflows prives n'est requis.
+   Verifier que les politiques Actions du fork autorisent ces workflows.
 3. Verifier que Code Security et le dependency graph sont effectivement actifs
    dans le fork. Une politique d'entreprise ou une licence manquante reste bloquante.
 4. Installer `security.yml` sous `.github/workflows/ghas-security.yml` dans le fork.
@@ -47,10 +46,38 @@ Aucun secret AWS, environnement de deploiement ou `secrets: inherit` n'est requi
 Les workflows d'infrastructure herites doivent rester desactives dans le fork
 de test ; cette premiere etape ne les desactive pas automatiquement.
 
+## Verification centrale de la GitHub App
+
+Le workflow `.github/workflows/ghas-prepare-fork.yml` fournit pour le moment une
+inspection en lecture seule. Il ne cree ni variable ni fichier et n'active aucun
+produit. Il exige un veritable fork GitHub appartenant a la meme organisation
+que la bibliotheque ; une copie independante du code sera refusee.
+
+Configurer une fois dans les reglages Actions de la bibliotheque :
+
+- Variable de depot `GHAS_APP_ID` : identifiant numerique de l'application.
+- Secret de depot `GHAS_APP_PRIVATE_KEY` : contenu complet de la cle PEM.
+- Installation de l'application autorisee sur le fork cible, avec au minimum
+  les permissions Administration et Contents en lecture pour cette inspection.
+
+Le jeton temporaire est limite au seul depot saisi et aux permissions de lecture
+demandees, puis revoque par l'action de creation du jeton en fin de job.
+
+Pour rendre le bouton `Run workflow` disponible, le fichier de preparation doit
+exister sur la branche par defaut de la bibliotheque. Apres publication de la
+branche de travail, integrer ce fichier par la procedure de revue habituelle.
+Depuis Actions, lancer `GHAS - Prepare existing fork` avec
+`MCN-CQEN/ceai-cqen-labinfra-cluster-ghas` comme cible. Consulter le resume de
+l'execution pour les etats renvoyes par GitHub.
+
+Un succes confirme l'authentification, l'acces et le lien de fork, pas l'activation
+GHAS ou les permissions d'ecriture. `not reported` signifie que GitHub n'a pas
+fourni l'etat, et non que la fonction est desactivee. Les politiques et licences
+restent a verifier avant toute activation. Aucun jeton ni cle ne doit etre copie
+dans les journaux ou le depot.
+
 ## Etapes suivantes
 
-- Workflow central recevant le nom d'un fork deja cree manuellement.
-- Authentification centrale et verification des depots cibles autorises.
 - Installation des fichiers, adaptation de Dependabot et creation des variables.
 - Activation des fonctions autorisees et rapport des blocages.
 - Tests de detection controles et collecte des preuves.
