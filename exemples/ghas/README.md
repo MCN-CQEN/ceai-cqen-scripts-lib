@@ -2,7 +2,7 @@
 
 Cette version centralise CodeQL et Dependency Review. Elle fournit une inspection
 du fork et un mode explicite d'activation des fonctions de securite. Elle ne cree
-pas de fork ni de variable.
+pas de fork. La creation des variables exige une demande explicite.
 
 ## Bibliotheque
 
@@ -31,9 +31,9 @@ Un controle obligatoire doit etre configure separement dans les regles de branch
 4. Installer `security.yml` sous `.github/workflows/ghas-security.yml` dans le fork.
    Remplacer les anciens workflows GHAS equivalents pour eviter les analyses
    dupliquees. Ne pas installer ce fichier dans le depot source.
-5. Pour cet essai initial, definir les variables de depot `CODEQL_ENABLED` et
-   `DEPENDENCY_REVIEW_ENABLED` a `true` uniquement lorsque leurs prerequis sont
-   satisfaits. Leur creation automatique sera ajoutee au workflow de preparation.
+5. Utiliser `configure_variables: true` dans le workflow central pour creer les
+   variables de depot `CODEQL_ENABLED` et `DEPENDENCY_REVIEW_ENABLED` selon les
+   prerequis constates. Aucun ajout manuel dans le fork n'est necessaire.
    L'ancienne variable `GHAS_ENABLED` n'est pas utilisee par ce nouvel exemple.
 6. Ouvrir une PR dans le fork pour tester les deux controles. Une execution
    manuelle teste CodeQL uniquement. Le workflow doit exister sur la branche par
@@ -51,7 +51,8 @@ de test ; cette premiere etape ne les desactive pas automatiquement.
 
 Le workflow `.github/workflows/ghas-prepare-fork.yml` fournit par defaut une
 inspection en lecture seule. Le mode d'activation exige `enable_security: true`.
-Il ne cree ni variable ni fichier. Il exige un veritable fork GitHub appartenant a la meme organisation
+La configuration des variables exige `configure_variables: true`. Il ne cree
+aucun fichier. Il exige un veritable fork GitHub appartenant a la meme organisation
 que la bibliotheque ; une copie independante du code sera refusee.
 
 Configurer une fois dans les reglages Actions de la bibliotheque :
@@ -114,6 +115,35 @@ l'execution pour les etats renvoyes par GitHub.
 Laisser `enable_security` decoche pour une inspection, ou le cocher pour demander
 l'activation apres verification des licences et de la cible.
 
+### Creation automatique des variables
+
+Le parametre `configure_variables` vaut `false` par defaut. Le pilote peut le
+passer a `true` avec `enable_security: false` pour configurer un fork dont les
+produits sont deja actives. Si une activation est demandee en meme temps et
+echoue, le job de configuration des variables n'est pas execute.
+
+Verifier dans la GitHub App la permission de depot `Variables: Read and write`,
+ainsi que `Administration: Read` et `Contents: Read`, et faire approuver les
+permissions sur son installation. Le jeton de ce job herite des permissions de
+l'installation, mais reste limite au fork selectionne. Il est revoque en fin
+de job. Les jobs d'inspection et d'activation conservent leurs jetons distincts.
+
+`CODEQL_ENABLED` vaut `true` si Code Security est confirme actif ou si le depot
+est public. `DEPENDENCY_REVIEW_ENABLED` vaut `true` seulement si ce prerequis
+est satisfait et si l'API de comparaison des dependances est accessible. Le
+workflow compare le commit courant de la branche par defaut a lui-meme : ce
+test verifie l'acces, pas la detection d'une vulnerabilite. GitHub documente
+notamment un refus HTTP 403 possible sur les forks. Un echec laisse cette
+variable a `false` ; il ne prouve pas a lui seul que le dependency graph est
+desactive. Ce job n'active pas le dependency graph.
+
+Les variables absentes sont creees, celles existantes sont mises a jour si
+necessaire, puis relues. Le resume `GHAS fork variables` indique les valeurs
+demandees et enregistrees. Une valeur `false` est un resultat possible meme
+si le job reussit : le controle correspondant reste desactive. Un refus de
+creation ou une incoherence de relecture fait echouer le job et peut laisser
+une configuration partielle. Verifier alors les deux variables avant de relancer.
+
 Un succes confirme l'authentification, l'acces et le lien de fork, pas l'activation
 GHAS ou les permissions d'ecriture. `not reported` signifie que GitHub n'a pas
 fourni l'etat, et non que la fonction est desactivee. Les politiques et licences
@@ -122,7 +152,7 @@ dans les journaux ou le depot.
 
 ## Etapes suivantes
 
-- Installation des fichiers, adaptation de Dependabot et creation des variables.
+- Installation des fichiers et adaptation de Dependabot.
 - Activation des fonctions autorisees et rapport des blocages.
 - Tests de detection controles et collecte des preuves.
 
@@ -134,3 +164,5 @@ garanti par la creation manuelle du fork.
 
 - [Workflows reutilisables](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
 - [Partage dans l'organisation](https://docs.github.com/en/actions/how-tos/reuse-automations/share-with-your-organization)
+- [Variables de depot via API](https://docs.github.com/en/rest/actions/variables)
+- [API Dependency Review et restrictions](https://docs.github.com/en/rest/dependency-graph/dependency-review)

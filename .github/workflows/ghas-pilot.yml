@@ -17,6 +17,7 @@ jobs:
     with:
       target_repository: MCN-CQEN/ceai-cqen-labinfra-cluster-ghas
       # Set true only to explicitly request activation on this fork (may consume licenses).
-      enable_security: true
+      enable_security: false
+      configure_variables: true
     secrets:
       GHAS_APP_PRIVATE_KEY: ${{ secrets.GHAS_APP_PRIVATE_KEY }}

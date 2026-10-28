@@ -11,6 +11,11 @@ on:
         required: false
         default: false
         type: boolean
+      configure_variables:
+        description: Create or update fork scan variables after checking prerequisites.
+        required: false
+        default: false
+        type: boolean
     secrets:
       GHAS_APP_PRIVATE_KEY:
         required: true
@@ -28,6 +33,11 @@ on:
         type: string
       enable_security:
         description: Enable Code Security, secret scanning and push protection (may consume licenses).
+        required: false
+        default: false
+        type: boolean
+      configure_variables:
+        description: Create or update CODEQL_ENABLED and DEPENDENCY_REVIEW_ENABLED on the fork.
         required: false
         default: false
         type: boolean
@@ -226,3 +236,96 @@ jobs:
             if (features.some(([key]) => state(after, key) !== 'enabled')) {
               core.setFailed('Security enablement is incomplete or not yet confirmed. Review the summary and fork settings; check App permissions, policies and licenses.');
             }
+
+  configure-variables:
+    name: Configure fork scan variables
+    needs: [inspect, enable-security]
+    if: ${{ !cancelled() && inputs.configure_variables == true && needs.inspect.result == 'success' && (needs.enable-security.result == 'success' || needs.enable-security.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # This token inherits the App installation permissions, limited to the target fork.
+      - name: Create fork token with installation permissions
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ needs.inspect.outputs.owner }}
+          repositories: ${{ needs.inspect.outputs.repo }}
+
+      - name: Check scan prerequisites and save variables
+        uses: actions/github-script@v9
+        env:
+          TARGET_OWNER: ${{ needs.inspect.outputs.owner }}
+          TARGET_REPO: ${{ needs.inspect.outputs.repo }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const target = { owner: process.env.TARGET_OWNER, repo: process.env.TARGET_REPO };
+            const { data: repo } = await github.rest.repos.get(target);
+            if (target.owner.toLowerCase() !== context.repo.owner.toLowerCase()
+                || target.repo.toLowerCase() === context.repo.repo.toLowerCase()
+                || !repo.fork || !repo.parent || repo.archived || repo.disabled) {
+              throw new Error('Target is not an active fork in the library organization. No variables were changed.');
+            }
+            const security = repo.security_and_analysis || {};
+            const codeStatus = security.code_security?.status || security.advanced_security?.status;
+            const codeReady = repo.visibility === 'public' || codeStatus === 'enabled';
+            let reviewReady = false;
+            let reviewCheck = 'not checked: Code Security prerequisite not confirmed';
+            if (codeReady) {
+              try {
+                const { data: branch } = await github.rest.repos.getBranch({ ...target, branch: repo.default_branch });
+                const sha = branch.commit.sha;
+                await github.request('GET /repos/{owner}/{repo}/dependency-graph/compare/{basehead}', {
+                  ...target, basehead: `${sha}...${sha}`
+                });
+                reviewReady = true;
+                reviewCheck = 'dependency comparison API accessible (same-commit probe)';
+              } catch (error) {
+                reviewCheck = `not confirmed: HTTP ${error.status || 'unknown'}`;
+                core.warning(`Dependency Review unavailable or not confirmed (HTTP ${error.status || 'unknown'}). The API can reject forks. Check the dependency graph, eligibility and permissions.`);
+              }
+            }
+            const desired = [
+              ['CODEQL_ENABLED', String(codeReady)],
+              ['DEPENDENCY_REVIEW_ENABLED', String(reviewReady)]
+            ];
+            const rows = [];
+            let failed = false;
+            for (const [name, value] of desired) {
+              try {
+                let previous;
+                try {
+                  ({ data: previous } = await github.rest.actions.getRepoVariable({ ...target, name }));
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                }
+                if (!previous) {
+                  await github.rest.actions.createRepoVariable({ ...target, name, value });
+                } else if (previous.value !== value) {
+                  await github.rest.actions.updateRepoVariable({ ...target, name, value });
+                }
+                const { data: saved } = await github.rest.actions.getRepoVariable({ ...target, name });
+                if (saved.value !== value) throw new Error('Variable read-back does not match the requested value.');
+                rows.push([name, value, saved.value, 'verified']);
+              } catch (error) {
+                failed = true;
+                rows.push([name, value, 'not verified', `failed (HTTP ${error.status || 'unknown'})`]);
+                core.warning(`${name}: could not verify variable configuration. Check the App Variables write permission and its installation approval.`);
+              }
+            }
+            await core.summary.addHeading('GHAS fork variables')
+              .addTable([
+                [{ data: 'Variable', header: true }, { data: 'Requested', header: true },
+                 { data: 'Saved', header: true }, { data: 'Result', header: true }], ...rows
+              ])
+              .addTable([
+                [{ data: 'Prerequisite', header: true }, { data: 'Result', header: true }],
+                ['Code Security / public repository', codeReady ? 'confirmed' : 'not confirmed'],
+                ['Dependency Review', reviewCheck]
+              ])
+              .addRaw('\nNo files were installed and no scans were launched. A successful same-commit probe does not prove dependency coverage or vulnerability detection. A false variable keeps that scan disabled; other configured checks may still run.\n')
+              .write();
+            if (failed) core.setFailed('Some variables were not verified. Review the summary and fork variables before retrying.');
