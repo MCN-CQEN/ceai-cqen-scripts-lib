@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   prepare:
+    name: Prepare fork with API diagnostics
     uses: ./.github/workflows/ghas-prepare-fork.yml
     with:
       target_repository: MCN-CQEN/ceai-cqen-labinfra-cluster-ghas

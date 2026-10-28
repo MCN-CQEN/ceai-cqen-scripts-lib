@@ -174,6 +174,7 @@ jobs:
               return security[key]?.status || 'not reported';
             };
             const attempts = new Map();
+            const reasons = new Map();
             for (const [key, label] of features) {
               if (state(before, key) === 'enabled') {
                 attempts.set(key, 'already enabled');
@@ -187,8 +188,16 @@ jobs:
                 attempts.set(key, 'request accepted');
               } catch (error) {
                 const status = error.status || 'unknown';
+                const body = error.response?.data;
+                const details = Array.isArray(body?.errors)
+                  ? body.errors.map((item) => typeof item === 'string' ? item
+                    : [item.resource, item.field, item.code, item.message].filter(Boolean).join(': '))
+                  : [];
+                const reason = [body?.message || 'No API explanation returned.', ...details]
+                  .join(' | ').replace(/\s+/g, ' ').slice(0, 1500);
                 attempts.set(key, `request failed (HTTP ${status})`);
-                core.warning(`${label}: GitHub refused the request (HTTP ${status}). Check App permissions, enterprise policy and licenses.`);
+                reasons.set(key, reason);
+                core.warning(`${label}: HTTP ${status}: ${reason}`);
               }
             }
             let after;
@@ -200,11 +209,16 @@ jobs:
                 .write();
               throw error;
             }
-            const rows = features.map(([key, label]) => [label, state(before, key), attempts.get(key), state(after, key)]);
+            const escapeHtml = (value) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const rows = features.map(([key, label]) => [
+              label, state(before, key), attempts.get(key), state(after, key),
+              escapeHtml(reasons.get(key) || '-')
+            ]);
             await core.summary.addHeading('GHAS activation')
               .addTable([
                 [{ data: 'Feature', header: true }, { data: 'Before', header: true },
-                 { data: 'Request', header: true }, { data: 'After', header: true }],
+                 { data: 'Request', header: true }, { data: 'After', header: true },
+                 { data: 'API explanation', header: true }],
                 ...rows
               ])
               .addRaw('\nOnly the target fork settings were requested. No variables or files were changed. Partial enablement is not rolled back. This does not validate successful scans or dependency graph availability.\n')
