@@ -1,7 +1,8 @@
 # Kit GHAS - premiere etape
 
-Cette premiere version centralise CodeQL et Dependency Review. Elle ne cree pas
-de fork, ne modifie pas les reglages GitHub et ne cree aucune variable.
+Cette version centralise CodeQL et Dependency Review. Elle fournit une inspection
+du fork et un mode explicite d'activation des fonctions de securite. Elle ne cree
+pas de fork ni de variable.
 
 ## Bibliotheque
 
@@ -48,9 +49,9 @@ de test ; cette premiere etape ne les desactive pas automatiquement.
 
 ## Verification centrale de la GitHub App
 
-Le workflow `.github/workflows/ghas-prepare-fork.yml` fournit pour le moment une
-inspection en lecture seule. Il ne cree ni variable ni fichier et n'active aucun
-produit. Il exige un veritable fork GitHub appartenant a la meme organisation
+Le workflow `.github/workflows/ghas-prepare-fork.yml` fournit par defaut une
+inspection en lecture seule. Le mode d'activation exige `enable_security: true`.
+Il ne cree ni variable ni fichier. Il exige un veritable fork GitHub appartenant a la meme organisation
 que la bibliotheque ; une copie independante du code sera refusee.
 
 Configurer une fois dans les reglages Actions de la bibliotheque :
@@ -74,6 +75,33 @@ Un push modifiant uniquement la documentation ne declenche pas cette inspection.
 Consulter l'execution sur cette branche dans Actions et son resume. Cette
 inspection ne lance pas CodeQL ou Dependency Review et ne modifie pas le fork.
 
+### Activation explicite avant fusion
+
+Le workflow `.github/workflows/ghas-pilot.yml` appelle le workflow de preparation
+depuis le meme commit. Il s'execute uniquement lorsqu'un push sur
+`feature/ghas-toolkit` modifie ce fichier pilote. Par defaut, `enable_security`
+vaut `false` et seule l'inspection est executee.
+
+Pour demander l'activation sans fusionner la PR, verifier la cible dans ce fichier,
+passer explicitement `enable_security` a `true`, puis committer et pousser ce
+changement. Cette operation peut consommer des licences. Elle exige la permission
+Administration en ecriture de l'application et l'approbation des permissions
+sur son installation. Le token d'activation est limite au fork et a cette permission.
+
+Le job d'activation tente d'activer Code Security, Secret scanning, puis Push
+protection, et relit les reglages. Il ne contourne pas les politiques de
+l'entreprise ou la facturation. Le resume `GHAS activation` presente les etats
+avant/apres et les requetes acceptees ou refusees. Un refus HTTP peut avoir
+plusieurs causes ; le code ne presume pas laquelle. En cas de propagation differee,
+verifier les reglages et relancer apres confirmation. Les fonctions deja actives
+ne sont pas desactivees et une activation partielle n'est pas annulee.
+
+Apres le test, remettre `enable_security: false` dans le pilote et pousser cette
+modification pour revenir aux inspections. Cela ne desactive pas les produits
+deja actives sur le fork. Une reexecution d'un ancien run conserve son ancien
+parametre : ne pas relancer un run d'activation pour effectuer une inspection.
+Ce pilote devra etre retire avant l'integration finale de la bibliotheque.
+
 ### Lancement manuel apres integration
 
 Pour rendre le bouton `Run workflow` disponible, le fichier de preparation doit
@@ -82,6 +110,9 @@ branche de travail, integrer ce fichier par la procedure de revue habituelle.
 Depuis Actions, lancer `GHAS - Prepare existing fork` avec
 `MCN-CQEN/ceai-cqen-labinfra-cluster-ghas` comme cible. Consulter le resume de
 l'execution pour les etats renvoyes par GitHub.
+
+Laisser `enable_security` decoche pour une inspection, ou le cocher pour demander
+l'activation apres verification des licences et de la cible.
 
 Un succes confirme l'authentification, l'acces et le lien de fork, pas l'activation
 GHAS ou les permissions d'ecriture. `not reported` signifie que GitHub n'a pas

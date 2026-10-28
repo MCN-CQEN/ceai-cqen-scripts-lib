@@ -1,0 +1,21 @@
+name: GHAS - Branch pilot
+
+on:
+  push:
+    branches:
+      - feature/ghas-toolkit
+    paths:
+      - .github/workflows/ghas-pilot.yml
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    uses: ./.github/workflows/ghas-prepare-fork.yml
+    with:
+      target_repository: MCN-CQEN/ceai-cqen-labinfra-cluster-ghas
+      # Set true only to explicitly request activation on this fork (may consume licenses).
+      enable_security: true
+    secrets:
+      GHAS_APP_PRIVATE_KEY: ${{ secrets.GHAS_APP_PRIVATE_KEY }}

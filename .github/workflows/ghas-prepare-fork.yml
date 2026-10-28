@@ -1,6 +1,19 @@
 name: GHAS - Prepare existing fork
 
 on:
+  workflow_call:
+    inputs:
+      target_repository:
+        required: true
+        type: string
+      enable_security:
+        description: Explicitly request security enablement; licenses may be consumed.
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      GHAS_APP_PRIVATE_KEY:
+        required: true
   push:
     branches:
       - feature/ghas-toolkit
@@ -13,6 +26,11 @@ on:
         required: true
         default: MCN-CQEN/ceai-cqen-labinfra-cluster-ghas
         type: string
+      enable_security:
+        description: Enable Code Security, secret scanning and push protection (may consume licenses).
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -24,6 +42,9 @@ concurrency:
 jobs:
   inspect:
     name: Verify GitHub App and fork settings (read-only)
+    outputs:
+      owner: ${{ steps.target.outputs.owner }}
+      repo: ${{ steps.target.outputs.repo }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -106,4 +127,88 @@ jobs:
             }
             if (!Object.keys(security).length) {
               core.warning('Security settings were not returned. Do not interpret missing settings as disabled.');
+            }
+
+  enable-security:
+    name: Enable security features on the verified fork
+    needs: inspect
+    if: ${{ inputs.enable_security == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Create administration token scoped to the fork
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ needs.inspect.outputs.owner }}
+          repositories: ${{ needs.inspect.outputs.repo }}
+          permission-administration: write
+
+      - name: Enable requested features and verify actual settings
+        uses: actions/github-script@v9
+        env:
+          TARGET_OWNER: ${{ needs.inspect.outputs.owner }}
+          TARGET_REPO: ${{ needs.inspect.outputs.repo }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const target = { owner: process.env.TARGET_OWNER, repo: process.env.TARGET_REPO };
+            const { data: before } = await github.rest.repos.get(target);
+            if (target.owner.toLowerCase() !== context.repo.owner.toLowerCase()
+                || target.repo.toLowerCase() === context.repo.repo.toLowerCase()
+                || !before.fork || !before.parent || before.archived || before.disabled) {
+              throw new Error('Target is not an active fork in the library organization. No activation attempted.');
+            }
+            const features = [
+              ['code_security', 'Code Security'],
+              ['secret_scanning', 'Secret scanning'],
+              ['secret_scanning_push_protection', 'Push protection']
+            ];
+            const state = (repo, key) => {
+              const security = repo.security_and_analysis || {};
+              if (key === 'code_security') {
+                return security.code_security?.status || security.advanced_security?.status || 'not reported';
+              }
+              return security[key]?.status || 'not reported';
+            };
+            const attempts = new Map();
+            for (const [key, label] of features) {
+              if (state(before, key) === 'enabled') {
+                attempts.set(key, 'already enabled');
+                continue;
+              }
+              try {
+                await github.rest.repos.update({
+                  ...target,
+                  security_and_analysis: { [key]: { status: 'enabled' } }
+                });
+                attempts.set(key, 'request accepted');
+              } catch (error) {
+                const status = error.status || 'unknown';
+                attempts.set(key, `request failed (HTTP ${status})`);
+                core.warning(`${label}: GitHub refused the request (HTTP ${status}). Check App permissions, enterprise policy and licenses.`);
+              }
+            }
+            let after;
+            try {
+              ({ data: after } = await github.rest.repos.get(target));
+            } catch (error) {
+              await core.summary.addHeading('GHAS activation')
+                .addRaw('Final verification failed. Some features may have been enabled; inspect the fork settings before retrying.\n')
+                .write();
+              throw error;
+            }
+            const rows = features.map(([key, label]) => [label, state(before, key), attempts.get(key), state(after, key)]);
+            await core.summary.addHeading('GHAS activation')
+              .addTable([
+                [{ data: 'Feature', header: true }, { data: 'Before', header: true },
+                 { data: 'Request', header: true }, { data: 'After', header: true }],
+                ...rows
+              ])
+              .addRaw('\nOnly the target fork settings were requested. No variables or files were changed. Partial enablement is not rolled back. This does not validate successful scans or dependency graph availability.\n')
+              .write();
+            if (features.some(([key]) => state(after, key) !== 'enabled')) {
+              core.setFailed('Security enablement is incomplete or not yet confirmed. Review the summary and fork settings; check App permissions, policies and licenses.');
             }
