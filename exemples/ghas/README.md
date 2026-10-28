@@ -63,6 +63,19 @@ Configurer une fois dans les reglages Actions de la bibliotheque :
 Le jeton temporaire est limite au seul depot saisi et aux permissions de lecture
 demandees, puis revoque par l'action de creation du jeton en fin de job.
 
+### Test avant fusion
+
+Un push sur `feature/ghas-toolkit` modifiant
+`.github/workflows/ghas-prepare-fork.yml` lance automatiquement l'inspection du
+fork pilote `MCN-CQEN/ceai-cqen-labinfra-cluster-ghas`. Ce declencheur permet de
+tester l'authentification sans fusionner la PR. Aucun parametre manuel n'est
+disponible sur cet evenement ; la cible du pilote est utilisee explicitement.
+Un push modifiant uniquement la documentation ne declenche pas cette inspection.
+Consulter l'execution sur cette branche dans Actions et son resume. Cette
+inspection ne lance pas CodeQL ou Dependency Review et ne modifie pas le fork.
+
+### Lancement manuel apres integration
+
 Pour rendre le bouton `Run workflow` disponible, le fichier de preparation doit
 exister sur la branche par defaut de la bibliotheque. Apres publication de la
 branche de travail, integrer ce fichier par la procedure de revue habituelle.

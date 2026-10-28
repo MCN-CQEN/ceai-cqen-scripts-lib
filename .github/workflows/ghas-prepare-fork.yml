@@ -1,6 +1,11 @@
 name: GHAS - Prepare existing fork
 
 on:
+  push:
+    branches:
+      - feature/ghas-toolkit
+    paths:
+      - .github/workflows/ghas-prepare-fork.yml
   workflow_dispatch:
     inputs:
       target_repository:
@@ -13,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ghas-prepare-${{ inputs.target_repository }}
+  group: ghas-prepare-${{ inputs.target_repository || 'MCN-CQEN/ceai-cqen-labinfra-cluster-ghas' }}
   cancel-in-progress: false
 
 jobs:
@@ -26,7 +31,7 @@ jobs:
         id: target
         uses: actions/github-script@v9
         env:
-          TARGET_REPOSITORY: ${{ inputs.target_repository }}
+          TARGET_REPOSITORY: ${{ inputs.target_repository || 'MCN-CQEN/ceai-cqen-labinfra-cluster-ghas' }}
           GHAS_APP_ID: ${{ vars.GHAS_APP_ID }}
           GHAS_APP_PRIVATE_KEY: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
         with:
