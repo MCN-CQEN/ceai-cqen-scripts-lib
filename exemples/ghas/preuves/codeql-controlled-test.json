@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "test": "controlled-codeql-unpinned-action",
+  "local_date": "2026-10-28",
+  "local_timezone": "America/Toronto",
+  "api_timestamps_timezone": "UTC",
+  "repository": "MCN-CQEN/ceai-cqen-labinfra-cluster-ghas",
+  "branch": "codex/ghas-controlled-test",
+  "base_commit": "c386d01ad2387af159ed343880559c39deeec7cf",
+  "fixture_path": ".github/workflows/ghas-controlled-test.yml",
+  "rule_id": "actions/unpinned-tag",
+  "fixture_job_condition": "${{ false }}",
+  "introduced": {
+    "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/blob/codex/ghas-controlled-test/.github/workflows/ghas-controlled-test.yml",
+    "blob_sha": "671b07f016678a34913bbdca8d2fe592bc7c64d7",
+    "commit_sha": "5b3f5d275b05546b94734c450f30d041ef6f815b",
+    "verified": false,
+    "verification_reason": "unsigned"
+  },
+  "detection_alert": [
+    {
+      "number": 52,
+      "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/security/code-scanning/52",
+      "state": "open",
+      "rule_id": "actions/unpinned-tag",
+      "location": {
+        "path": ".github/workflows/ghas-controlled-test.yml",
+        "start_line": 16,
+        "end_line": 16,
+        "start_column": 15,
+        "end_column": 94
+      },
+      "commit_sha": "5b3f5d275b05546b94734c450f30d041ef6f815b"
+    }
+  ],
+  "corrected": {
+    "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/blob/codex/ghas-controlled-test/.github/workflows/ghas-controlled-test.yml",
+    "blob_sha": "c1edf616ac8340b47cfd834f1fb2071ac1d1ef53",
+    "commit_sha": "9d2dbdf579fa0a9e6ac937a09c3e9af9075b820f",
+    "verified": false,
+    "verification_reason": "unsigned"
+  },
+  "final_alert": {
+    "number": 52,
+    "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/security/code-scanning/52",
+    "state": null,
+    "rule_id": "actions/unpinned-tag",
+    "created_at": "2026-10-28T22:17:13Z",
+    "fixed_at": null,
+    "most_recent_instance": {
+      "ref": "refs/heads/codex/ghas-controlled-test",
+      "commit_sha": "5b3f5d275b05546b94734c450f30d041ef6f815b",
+      "state": "fixed",
+      "location": {
+        "path": ".github/workflows/ghas-controlled-test.yml",
+        "start_line": 16,
+        "end_line": 16,
+        "start_column": 15,
+        "end_column": 94
+      }
+    }
+  },
+  "workflow_runs": [
+    {
+      "id": 40778919910,
+      "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/40778919910",
+      "head_sha": "9d2dbdf579fa0a9e6ac937a09c3e9af9075b820f",
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-28T22:18:18Z"
+    },
+    {
+      "id": 40778673766,
+      "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/40778673766",
+      "head_sha": "5b3f5d275b05546b94734c450f30d041ef6f815b",
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-28T22:16:24Z"
+    }
+  ],
+  "jobs": {
+    "40778673766": [
+      {
+        "id": 123134475483,
+        "name": "codeql / CodeQL (actions)",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/40778673766/job/123134475483"
+      },
+      {
+        "id": 123134475889,
+        "name": "codeql / CodeQL (python)",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/40778673766/job/123134475889"
+      },
+      {
+        "id": 123134477841,
+        "name": "dependency-review",
+        "status": "completed",
+        "conclusion": "skipped",
+        "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/40778673766/job/123134477841"
+      }
+    ],
+    "40778919910": [
+      {
+        "id": 123135322942,
+        "name": "codeql / CodeQL (python)",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/40778919910/job/123135322942"
+      },
+      {
+        "id": 123135323295,
+        "name": "codeql / CodeQL (actions)",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/40778919910/job/123135323295"
+      },
+      {
+        "id": 123135324743,
+        "name": "dependency-review",
+        "status": "completed",
+        "conclusion": "skipped",
+        "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/40778919910/job/123135324743"
+      }
+    ]
+  },
+  "analyses": [
+    {
+      "id": 2049426373,
+      "commit_sha": "9d2dbdf579fa0a9e6ac937a09c3e9af9075b820f",
+      "ref": "refs/heads/codex/ghas-controlled-test",
+      "created_at": "2026-10-28T22:19:24Z",
+      "results_count": 51,
+      "error": "",
+      "category": "/language:actions",
+      "url": "https://api.github.com/repos/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/code-scanning/analyses/2049426373"
+    },
+    {
+      "id": 2049426155,
+      "commit_sha": "9d2dbdf579fa0a9e6ac937a09c3e9af9075b820f",
+      "ref": "refs/heads/codex/ghas-controlled-test",
+      "created_at": "2026-10-28T22:19:21Z",
+      "results_count": 0,
+      "error": "",
+      "category": "/language:python",
+      "url": "https://api.github.com/repos/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/code-scanning/analyses/2049426155"
+    },
+    {
+      "id": 2049414982,
+      "commit_sha": "5b3f5d275b05546b94734c450f30d041ef6f815b",
+      "ref": "refs/heads/codex/ghas-controlled-test",
+      "created_at": "2026-10-28T22:17:27Z",
+      "results_count": 0,
+      "error": "",
+      "category": "/language:python",
+      "url": "https://api.github.com/repos/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/code-scanning/analyses/2049414982"
+    },
+    {
+      "id": 2049413737,
+      "commit_sha": "5b3f5d275b05546b94734c450f30d041ef6f815b",
+      "ref": "refs/heads/codex/ghas-controlled-test",
+      "created_at": "2026-10-28T22:17:13Z",
+      "results_count": 52,
+      "error": "",
+      "category": "/language:actions",
+      "url": "https://api.github.com/repos/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/code-scanning/analyses/2049413737"
+    }
+  ],
+  "limitations": [
+    "Alert state is verified for the test-branch instance; the top-level alert state returned by GitHub is null.",
+    "No validation of Secret scanning, Push protection or Dependency Review.",
+    "No pull request was created; PR-triggered scans are not validated by this test.",
+    "No source repository or fork default-branch changes were requested."
+  ]
+}

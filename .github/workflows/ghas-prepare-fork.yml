@@ -1,0 +1,392 @@
+name: GHAS - Prepare existing fork
+
+on:
+  workflow_call:
+    inputs:
+      target_repository:
+        required: true
+        type: string
+      enable_security:
+        description: Explicitly request security enablement; licenses may be consumed.
+        required: false
+        default: false
+        type: boolean
+      configure_variables:
+        description: Create or update fork scan variables after checking prerequisites.
+        required: false
+        default: false
+        type: boolean
+      files_mode:
+        description: none, preview or install (proposal branch only).
+        required: false
+        default: none
+        type: string
+    secrets:
+      GHAS_APP_PRIVATE_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      target_repository:
+        description: Existing fork to inspect (OWNER/REPO).
+        required: true
+        type: string
+      enable_security:
+        description: Enable Code Security, secret scanning and push protection (may consume licenses).
+        required: false
+        default: false
+        type: boolean
+      configure_variables:
+        description: Create or update CODEQL_ENABLED and DEPENDENCY_REVIEW_ENABLED on the fork.
+        required: false
+        default: false
+        type: boolean
+      files_mode:
+        description: Inspect project and optionally install GHAS files on a proposal branch.
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - preview
+          - install
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghas-prepare-${{ inputs.target_repository }}
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Verify GitHub App and fork settings (read-only)
+    outputs:
+      owner: ${{ steps.target.outputs.owner }}
+      repo: ${{ steps.target.outputs.repo }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Validate target and central credentials
+        id: target
+        uses: actions/github-script@v9
+        env:
+          TARGET_REPOSITORY: ${{ inputs.target_repository }}
+          GHAS_APP_ID: ${{ vars.GHAS_APP_ID }}
+          GHAS_APP_PRIVATE_KEY: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+        with:
+          script: |
+            const target = process.env.TARGET_REPOSITORY.trim();
+            if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target)) {
+              throw new Error('Use OWNER/REPO for the target repository.');
+            }
+            const [owner, repo] = target.split('/');
+            if (owner.toLowerCase() !== context.repo.owner.toLowerCase()) {
+              throw new Error('The target must belong to the library organization.');
+            }
+            if (repo.toLowerCase() === context.repo.repo.toLowerCase()) {
+              throw new Error('The library cannot be the target.');
+            }
+            if (!process.env.GHAS_APP_ID || !process.env.GHAS_APP_PRIVATE_KEY) {
+              throw new Error('Configure GHAS_APP_ID (variable) and GHAS_APP_PRIVATE_KEY (secret) in the library.');
+            }
+            core.setOutput('owner', owner);
+            core.setOutput('repo', repo);
+
+      - name: Create read-only token scoped to the target
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repo }}
+          permission-administration: read
+          permission-contents: read
+
+      - name: Inspect fork and report security settings
+        uses: actions/github-script@v9
+        env:
+          TARGET_OWNER: ${{ steps.target.outputs.owner }}
+          TARGET_REPO: ${{ steps.target.outputs.repo }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const { data: repo } = await github.rest.repos.get({
+              owner: process.env.TARGET_OWNER,
+              repo: process.env.TARGET_REPO
+            });
+            if (!repo.fork || !repo.parent) {
+              throw new Error('The target is not a GitHub fork. No changes were made.');
+            }
+            const security = repo.security_and_analysis || {};
+            const status = (key) => security[key]?.status || 'not reported';
+            const ghasEnabled = security.advanced_security?.status === 'enabled';
+            const codeEnabled = ghasEnabled || security.code_security?.status === 'enabled';
+            await core.summary
+              .addHeading('GHAS fork inspection')
+              .addTable([
+                [{ data: 'Check', header: true }, { data: 'Result', header: true }],
+                ['Target', repo.full_name],
+                ['Default branch', repo.default_branch],
+                ['GitHub fork', 'yes'],
+                ['Visibility', repo.visibility],
+                ['Advanced Security', status('advanced_security')],
+                ['Code Security', status('code_security')],
+                ['Secret scanning', status('secret_scanning')],
+                ['Push protection', status('secret_scanning_push_protection')],
+                ['Changes made', 'none']
+              ])
+              .addRaw('\nAuthentication and target access verified. This does not prove write permissions, license availability, dependency graph availability or successful scans.\n')
+              .write();
+            if (!codeEnabled && !repo.private) {
+              core.notice('No explicit Code Security enablement reported. Check repository eligibility and policy.');
+            } else if (!codeEnabled) {
+              core.warning('Code Security enablement was not confirmed. Check settings, licenses and enterprise policy.');
+            }
+            if (!Object.keys(security).length) {
+              core.warning('Security settings were not returned. Do not interpret missing settings as disabled.');
+            }
+
+  enable-security:
+    name: Enable security features on the verified fork
+    needs: inspect
+    if: ${{ inputs.enable_security == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Create administration token scoped to the fork
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ needs.inspect.outputs.owner }}
+          repositories: ${{ needs.inspect.outputs.repo }}
+          permission-administration: write
+
+      - name: Enable requested features and verify actual settings
+        uses: actions/github-script@v9
+        env:
+          TARGET_OWNER: ${{ needs.inspect.outputs.owner }}
+          TARGET_REPO: ${{ needs.inspect.outputs.repo }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const target = { owner: process.env.TARGET_OWNER, repo: process.env.TARGET_REPO };
+            const { data: before } = await github.rest.repos.get(target);
+            if (target.owner.toLowerCase() !== context.repo.owner.toLowerCase()
+                || target.repo.toLowerCase() === context.repo.repo.toLowerCase()
+                || !before.fork || !before.parent || before.archived || before.disabled) {
+              throw new Error('Target is not an active fork in the library organization. No activation attempted.');
+            }
+            const features = [
+              ['code_security', 'Code Security'],
+              ['secret_scanning', 'Secret scanning'],
+              ['secret_scanning_push_protection', 'Push protection']
+            ];
+            const state = (repo, key) => {
+              const security = repo.security_and_analysis || {};
+              if (key === 'code_security') {
+                return security.code_security?.status || security.advanced_security?.status || 'not reported';
+              }
+              return security[key]?.status || 'not reported';
+            };
+            const attempts = new Map();
+            const reasons = new Map();
+            for (const [key, label] of features) {
+              if (state(before, key) === 'enabled') {
+                attempts.set(key, 'already enabled');
+                continue;
+              }
+              try {
+                await github.rest.repos.update({
+                  ...target,
+                  security_and_analysis: { [key]: { status: 'enabled' } }
+                });
+                attempts.set(key, 'request accepted');
+              } catch (error) {
+                const status = error.status || 'unknown';
+                const body = error.response?.data;
+                const details = Array.isArray(body?.errors)
+                  ? body.errors.map((item) => typeof item === 'string' ? item
+                    : [item.resource, item.field, item.code, item.message].filter(Boolean).join(': '))
+                  : [];
+                const reason = [body?.message || 'No API explanation returned.', ...details]
+                  .join(' | ').replace(/\s+/g, ' ').slice(0, 1500);
+                attempts.set(key, `request failed (HTTP ${status})`);
+                reasons.set(key, reason);
+                core.warning(`${label}: HTTP ${status}: ${reason}`);
+              }
+            }
+            let after;
+            try {
+              ({ data: after } = await github.rest.repos.get(target));
+            } catch (error) {
+              await core.summary.addHeading('GHAS activation')
+                .addRaw('Final verification failed. Some features may have been enabled; inspect the fork settings before retrying.\n')
+                .write();
+              throw error;
+            }
+            const escapeHtml = (value) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const rows = features.map(([key, label]) => [
+              label, state(before, key), attempts.get(key), state(after, key),
+              escapeHtml(reasons.get(key) || '-')
+            ]);
+            await core.summary.addHeading('GHAS activation')
+              .addTable([
+                [{ data: 'Feature', header: true }, { data: 'Before', header: true },
+                 { data: 'Request', header: true }, { data: 'After', header: true },
+                 { data: 'API explanation', header: true }],
+                ...rows
+              ])
+              .addRaw('\nOnly the target fork settings were requested. No variables or files were changed. Partial enablement is not rolled back. This does not validate successful scans or dependency graph availability.\n')
+              .write();
+            if (features.some(([key]) => state(after, key) !== 'enabled')) {
+              core.setFailed('Security enablement is incomplete or not yet confirmed. Review the summary and fork settings; check App permissions, policies and licenses.');
+            }
+
+  configure-variables:
+    name: Configure fork scan variables
+    needs: [inspect, enable-security]
+    if: ${{ !cancelled() && inputs.configure_variables == true && needs.inspect.result == 'success' && (needs.enable-security.result == 'success' || needs.enable-security.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # This token inherits the App installation permissions, limited to the target fork.
+      - name: Create fork token with installation permissions
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ needs.inspect.outputs.owner }}
+          repositories: ${{ needs.inspect.outputs.repo }}
+
+      - name: Check scan prerequisites and save variables
+        uses: actions/github-script@v9
+        env:
+          TARGET_OWNER: ${{ needs.inspect.outputs.owner }}
+          TARGET_REPO: ${{ needs.inspect.outputs.repo }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const target = { owner: process.env.TARGET_OWNER, repo: process.env.TARGET_REPO };
+            const { data: repo } = await github.rest.repos.get(target);
+            if (target.owner.toLowerCase() !== context.repo.owner.toLowerCase()
+                || target.repo.toLowerCase() === context.repo.repo.toLowerCase()
+                || !repo.fork || !repo.parent || repo.archived || repo.disabled) {
+              throw new Error('Target is not an active fork in the library organization. No variables were changed.');
+            }
+            const security = repo.security_and_analysis || {};
+            const codeStatus = security.code_security?.status || security.advanced_security?.status;
+            const codeReady = repo.visibility === 'public' || codeStatus === 'enabled';
+            let reviewReady = false;
+            let reviewCheck = 'not checked: Code Security prerequisite not confirmed';
+            if (codeReady) {
+              try {
+                const { data: branch } = await github.rest.repos.getBranch({ ...target, branch: repo.default_branch });
+                const sha = branch.commit.sha;
+                await github.request('GET /repos/{owner}/{repo}/dependency-graph/compare/{basehead}', {
+                  ...target, basehead: `${sha}...${sha}`
+                });
+                reviewReady = true;
+                reviewCheck = 'dependency comparison API accessible (same-commit probe)';
+              } catch (error) {
+                reviewCheck = `not confirmed: HTTP ${error.status || 'unknown'}`;
+                core.warning(`Dependency Review unavailable or not confirmed (HTTP ${error.status || 'unknown'}). The API can reject forks. Check the dependency graph, eligibility and permissions.`);
+              }
+            }
+            const desired = [
+              ['CODEQL_ENABLED', String(codeReady)],
+              ['DEPENDENCY_REVIEW_ENABLED', String(reviewReady)]
+            ];
+            const rows = [];
+            let failed = false;
+            for (const [name, value] of desired) {
+              try {
+                let previous;
+                try {
+                  ({ data: previous } = await github.rest.actions.getRepoVariable({ ...target, name }));
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                }
+                if (!previous) {
+                  await github.rest.actions.createRepoVariable({ ...target, name, value });
+                } else if (previous.value !== value) {
+                  await github.rest.actions.updateRepoVariable({ ...target, name, value });
+                }
+                const { data: saved } = await github.rest.actions.getRepoVariable({ ...target, name });
+                if (saved.value !== value) throw new Error('Variable read-back does not match the requested value.');
+                rows.push([name, value, saved.value, 'verified']);
+              } catch (error) {
+                failed = true;
+                rows.push([name, value, 'not verified', `failed (HTTP ${error.status || 'unknown'})`]);
+                core.warning(`${name}: could not verify variable configuration. Check the App Variables write permission and its installation approval.`);
+              }
+            }
+            await core.summary.addHeading('GHAS fork variables')
+              .addTable([
+                [{ data: 'Variable', header: true }, { data: 'Requested', header: true },
+                 { data: 'Saved', header: true }, { data: 'Result', header: true }], ...rows
+              ])
+              .addTable([
+                [{ data: 'Prerequisite', header: true }, { data: 'Result', header: true }],
+                ['Code Security / public repository', codeReady ? 'confirmed' : 'not confirmed'],
+                ['Dependency Review', reviewCheck]
+              ])
+              .addRaw('\nNo files were installed and no scans were launched. A successful same-commit probe does not prove dependency coverage or vulnerability detection. A false variable keeps that scan disabled; other configured checks may still run.\n')
+              .write();
+            if (failed) core.setFailed('Some variables were not verified. Review the summary and fork variables before retrying.');
+
+  prepare-files:
+    name: Prepare project-specific files
+    needs: inspect
+    if: ${{ inputs.files_mode == 'preview' || inputs.files_mode == 'install' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout trusted library only
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Test project detection and branch installation
+        run: python3 -m unittest discover -s tests/ghas -v
+
+      - name: Create read-only preview token
+        if: ${{ inputs.files_mode == 'preview' }}
+        id: read-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ needs.inspect.outputs.owner }}
+          repositories: ${{ needs.inspect.outputs.repo }}
+          permission-contents: read
+
+      - name: Create scoped installation token
+        if: ${{ inputs.files_mode == 'install' }}
+        id: write-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ needs.inspect.outputs.owner }}
+          repositories: ${{ needs.inspect.outputs.repo }}
+          permission-contents: write
+          permission-workflows: write
+
+      - name: Inventory fork and prepare configuration
+        env:
+          GH_TOKEN: ${{ steps.read-token.outputs.token || steps.write-token.outputs.token }}
+          TARGET_REPOSITORY: ${{ format('{0}/{1}', needs.inspect.outputs.owner, needs.inspect.outputs.repo) }}
+          LIBRARY_REPOSITORY: ${{ github.repository }}
+          LIBRARY_SHA: ${{ github.sha }}
+          FILES_MODE: ${{ inputs.files_mode }}
+          GHAS_PLAN_PATH: ${{ runner.temp }}/ghas-preparation-plan.json
+        run: >-
+          python3 scripts/ghas/prepare_files.py
+          --target "$TARGET_REPOSITORY"
+          --library "$LIBRARY_REPOSITORY"
+          --library-sha "$LIBRARY_SHA"
+          --mode "$FILES_MODE"

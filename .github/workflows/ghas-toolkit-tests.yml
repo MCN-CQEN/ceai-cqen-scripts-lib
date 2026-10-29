@@ -1,0 +1,27 @@
+name: GHAS toolkit tests
+
+on:
+  push:
+    branches: [feature/ghas-toolkit]
+    paths:
+      - scripts/ghas/**
+      - tests/ghas/**
+      - .github/workflows/ghas-toolkit-tests.yml
+  pull_request:
+    paths:
+      - scripts/ghas/**
+      - tests/ghas/**
+      - .github/workflows/ghas-toolkit-tests.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests/ghas -v

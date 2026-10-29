@@ -16,6 +16,7 @@ L'objectif est de fournir un point d'accès unique, versionné et documenté pou
 - [actions](./actions/README.md): Scripts communs et génériques pour GitHub Actions.
 - [ansible](./ansible): Collections Ansible pour l'automatisation et gestion des configurations.
 - [exemples](./exemples): Scripts qui montrent l'utilisation des scripts communs à partir d'un dépôt externe.
+- [Kit GHAS](./exemples/ghas/README.md): Workflows de securite reutilisables et exemple pour un fork de test.
 
 ## License
 Ce projet est sous la Licence Libre du Québec - Permissive (LiLiQ-P) version 1.1.

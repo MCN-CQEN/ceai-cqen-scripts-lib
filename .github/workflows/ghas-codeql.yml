@@ -1,0 +1,40 @@
+name: Reusable GHAS - CodeQL
+
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: 'JSON array of CodeQL languages; this initial version targets interpreted languages.'
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(inputs.languages) }}
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Analyze caller repository
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
