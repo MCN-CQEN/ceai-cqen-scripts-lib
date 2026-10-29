@@ -16,20 +16,19 @@ on:
         required: false
         default: false
         type: boolean
+      files_mode:
+        description: none, preview or install (proposal branch only).
+        required: false
+        default: none
+        type: string
     secrets:
       GHAS_APP_PRIVATE_KEY:
         required: true
-  push:
-    branches:
-      - feature/ghas-toolkit
-    paths:
-      - .github/workflows/ghas-prepare-fork.yml
   workflow_dispatch:
     inputs:
       target_repository:
         description: Existing fork to inspect (OWNER/REPO).
         required: true
-        default: MCN-CQEN/ceai-cqen-labinfra-cluster-ghas
         type: string
       enable_security:
         description: Enable Code Security, secret scanning and push protection (may consume licenses).
@@ -41,12 +40,21 @@ on:
         required: false
         default: false
         type: boolean
+      files_mode:
+        description: Inspect project and optionally install GHAS files on a proposal branch.
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - preview
+          - install
 
 permissions:
   contents: read
 
 concurrency:
-  group: ghas-prepare-${{ inputs.target_repository || 'MCN-CQEN/ceai-cqen-labinfra-cluster-ghas' }}
+  group: ghas-prepare-${{ inputs.target_repository }}
   cancel-in-progress: false
 
 jobs:
@@ -62,7 +70,7 @@ jobs:
         id: target
         uses: actions/github-script@v9
         env:
-          TARGET_REPOSITORY: ${{ inputs.target_repository || 'MCN-CQEN/ceai-cqen-labinfra-cluster-ghas' }}
+          TARGET_REPOSITORY: ${{ inputs.target_repository }}
           GHAS_APP_ID: ${{ vars.GHAS_APP_ID }}
           GHAS_APP_PRIVATE_KEY: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
         with:
@@ -329,3 +337,56 @@ jobs:
               .addRaw('\nNo files were installed and no scans were launched. A successful same-commit probe does not prove dependency coverage or vulnerability detection. A false variable keeps that scan disabled; other configured checks may still run.\n')
               .write();
             if (failed) core.setFailed('Some variables were not verified. Review the summary and fork variables before retrying.');
+
+  prepare-files:
+    name: Prepare project-specific files
+    needs: inspect
+    if: ${{ inputs.files_mode == 'preview' || inputs.files_mode == 'install' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout trusted library only
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Test project detection and branch installation
+        run: python3 -m unittest discover -s tests/ghas -v
+
+      - name: Create read-only preview token
+        if: ${{ inputs.files_mode == 'preview' }}
+        id: read-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ needs.inspect.outputs.owner }}
+          repositories: ${{ needs.inspect.outputs.repo }}
+          permission-contents: read
+
+      - name: Create scoped installation token
+        if: ${{ inputs.files_mode == 'install' }}
+        id: write-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ needs.inspect.outputs.owner }}
+          repositories: ${{ needs.inspect.outputs.repo }}
+          permission-contents: write
+          permission-workflows: write
+
+      - name: Inventory fork and prepare configuration
+        env:
+          GH_TOKEN: ${{ steps.read-token.outputs.token || steps.write-token.outputs.token }}
+          TARGET_REPOSITORY: ${{ format('{0}/{1}', needs.inspect.outputs.owner, needs.inspect.outputs.repo) }}
+          LIBRARY_REPOSITORY: ${{ github.repository }}
+          LIBRARY_SHA: ${{ github.sha }}
+          FILES_MODE: ${{ inputs.files_mode }}
+          GHAS_PLAN_PATH: ${{ runner.temp }}/ghas-preparation-plan.json
+        run: >-
+          python3 scripts/ghas/prepare_files.py
+          --target "$TARGET_REPOSITORY"
+          --library "$LIBRARY_REPOSITORY"
+          --library-sha "$LIBRARY_SHA"
+          --mode "$FILES_MODE"

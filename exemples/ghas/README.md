@@ -1,8 +1,12 @@
-# Kit GHAS - premiere etape
+# Kit GHAS pour les forks de test
 
 Cette version centralise CodeQL et Dependency Review. Elle fournit une inspection
 du fork et un mode explicite d'activation des fonctions de securite. Elle ne cree
-pas de fork. La creation des variables exige une demande explicite.
+pas de fork. La creation des variables et l'installation des fichiers exigent
+des demandes explicites. Le depot cluster est un pilote, pas une cible imposee.
+
+Voir [la preparation multi-depot](./preparation-multidepot.md) pour les modes
+preview/install, les permissions et les limites de la detection automatique.
 
 ## Bibliotheque
 
@@ -28,9 +32,9 @@ Un controle obligatoire doit etre configure separement dans les regles de branch
    Verifier que les politiques Actions du fork autorisent ces workflows.
 3. Verifier que Code Security et le dependency graph sont effectivement actifs
    dans le fork. Une politique d'entreprise ou une licence manquante reste bloquante.
-4. Installer `security.yml` sous `.github/workflows/ghas-security.yml` dans le fork.
-   Remplacer les anciens workflows GHAS equivalents pour eviter les analyses
-   dupliquees. Ne pas installer ce fichier dans le depot source.
+4. Utiliser `files_mode: preview`, puis `files_mode: install` pour generer les
+   fichiers adaptes au projet dans une branche du fork. L'exemple `security.yml`
+   reste utilisable pour une installation manuelle du pilote uniquement.
 5. Utiliser `configure_variables: true` dans le workflow central pour creer les
    variables de depot `CODEQL_ENABLED` et `DEPENDENCY_REVIEW_ENABLED` selon les
    prerequis constates. Aucun ajout manuel dans le fork n'est necessaire.
@@ -41,8 +45,9 @@ Un controle obligatoire doit etre configure separement dans les regles de branch
 7. Consulter les jobs de la PR et `Security > Code scanning` dans le fork.
    Un job reussi sans alerte ne prouve pas la detection d'un probleme controle.
 
-Les references a `feature/ghas-toolkit` servent au pilote. Apres validation,
-les remplacer par un SHA de commit valide ou une version publiee de la bibliotheque.
+Les references a `feature/ghas-toolkit` de l'exemple manuel servent au pilote.
+Les fichiers generes automatiquement utilisent deja un SHA complet de la
+bibliotheque. Mettre ce SHA a jour deliberement pour adopter une nouvelle version.
 Aucun secret AWS, environnement de deploiement ou `secrets: inherit` n'est requis.
 Les workflows d'infrastructure herites doivent rester desactives dans le fork
 de test ; cette premiere etape ne les desactive pas automatiquement.
@@ -51,8 +56,8 @@ de test ; cette premiere etape ne les desactive pas automatiquement.
 
 Le workflow `.github/workflows/ghas-prepare-fork.yml` fournit par defaut une
 inspection en lecture seule. Le mode d'activation exige `enable_security: true`.
-La configuration des variables exige `configure_variables: true`. Il ne cree
-aucun fichier. Il exige un veritable fork GitHub appartenant a la meme organisation
+La configuration des variables exige `configure_variables: true`. La preparation
+des fichiers utilise `files_mode`. Il exige un veritable fork GitHub appartenant a la meme organisation
 que la bibliotheque ; une copie independante du code sera refusee.
 
 Configurer une fois dans les reglages Actions de la bibliotheque :
@@ -67,21 +72,20 @@ demandees, puis revoque par l'action de creation du jeton en fin de job.
 
 ### Test avant fusion
 
-Un push sur `feature/ghas-toolkit` modifiant
-`.github/workflows/ghas-prepare-fork.yml` lance automatiquement l'inspection du
-fork pilote `MCN-CQEN/ceai-cqen-labinfra-cluster-ghas`. Ce declencheur permet de
-tester l'authentification sans fusionner la PR. Aucun parametre manuel n'est
-disponible sur cet evenement ; la cible du pilote est utilisee explicitement.
-Un push modifiant uniquement la documentation ne declenche pas cette inspection.
-Consulter l'execution sur cette branche dans Actions et son resume. Cette
-inspection ne lance pas CodeQL ou Dependency Review et ne modifie pas le fork.
+Le workflow central n'a plus de cible cluster par defaut ni de declenchement
+sur un simple push. Pour tester sans fusion, modifier et pousser le fichier
+`.github/workflows/ghas-pilot.yml` sur `feature/ghas-toolkit`. Ce pilote transmet
+explicitement le depot cible et les options au workflow central du meme commit.
+Changer `target_repository` dans ce fichier pour essayer un autre fork autorise.
+Le pilote est actuellement en mode `files_mode: preview`, sans activation des
+produits ni modification des variables. Un push de documentation seule ne le lance pas.
 
 ### Activation explicite avant fusion
 
 Le workflow `.github/workflows/ghas-pilot.yml` appelle le workflow de preparation
 depuis le meme commit. Il s'execute uniquement lorsqu'un push sur
 `feature/ghas-toolkit` modifie ce fichier pilote. Par defaut, `enable_security`
-vaut `false` et seule l'inspection est executee.
+vaut `false` ; la preparation des fichiers depend de `files_mode`.
 
 Pour demander l'activation sans fusionner la PR, verifier la cible dans ce fichier,
 passer explicitement `enable_security` a `true`, puis committer et pousser ce
@@ -152,15 +156,19 @@ dans les journaux ou le depot.
 
 ## Etapes suivantes
 
-- Installation des fichiers et adaptation de Dependabot.
-- Activation des fonctions autorisees et rapport des blocages.
-- Tests de detection controles et collecte des preuves.
+- Valider la preparation sur plusieurs projets et revoir les propositions.
+- Completer les profils CodeQL non encore automatises.
+- Valider Secret scanning, Push protection et les controles sur PR.
 
 Secret scanning et Dependabot restent des services propres au fork ; ces deux
 workflows reutilisables ne les activent pas. Le nombre de licences n'est pas
 garanti par la creation manuelle du fork.
 
-## References
+## Preuves de validation
+
+- [Test CodeQL controle : detection et correction](./preuves/codeql-controlled-test.md)
+
+## Documentation externe
 
 - [Workflows reutilisables](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
 - [Partage dans l'organisation](https://docs.github.com/en/actions/how-tos/reuse-automations/share-with-your-organization)
