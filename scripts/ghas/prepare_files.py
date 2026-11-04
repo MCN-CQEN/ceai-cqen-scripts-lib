@@ -178,7 +178,7 @@ def prepare(api, target, library, library_sha, mode="preview"):
         return plan
 
     # Stage all files in one Git tree/commit; never update the default branch.
-    branch = f"ghas/setup-{commit_sha[:12]}-{library_sha[:12]}"
+    branch = f"feature/ghas-setup-{commit_sha[:12]}-{library_sha[:12]}"
     new_tree = api.request("POST", base + "/git/trees", {
         "base_tree": commit["tree"]["sha"],
         "tree": [{"path": path, "mode": "100644", "type": "blob", "content": content}
