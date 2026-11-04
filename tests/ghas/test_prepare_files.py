@@ -33,7 +33,7 @@ class FakeGitHub:
                 return {"tree": {"sha": "base-tree"}}
             if path.endswith("/git/trees/base-tree?recursive=1"):
                 return {"tree": list(self.files.values()), "truncated": self.truncated}
-            if "/git/ref/heads/ghas/setup-" in path:
+            if "/git/ref/heads/feature/ghas-setup-" in path:
                 if self.proposal:
                     return {"object": {"sha": "existing-proposal"}}
                 raise kit.ApiError(404, "Not Found")
@@ -139,7 +139,7 @@ class PreparationTests(unittest.TestCase):
         posts = [(path, data) for method, path, data in api.calls if method == "POST"]
         self.assertEqual(len(posts), 3)
         self.assertEqual(posts[1][1]["parents"], [BASE])
-        self.assertTrue(posts[2][1]["ref"].startswith("refs/heads/ghas/setup-"))
+        self.assertTrue(posts[2][1]["ref"].startswith("refs/heads/feature/ghas-setup-"))
         self.assertEqual(plan["installation"], "proposal branch created")
         self.assertEqual({item["path"] for item in posts[0][1]["tree"]}, {kit.WORKFLOW, kit.DEPENDABOT})
         self.assertFalse(any(method in {"PATCH", "DELETE"} for method, _, _ in api.calls))
