@@ -115,9 +115,11 @@ a jour de la branche par defaut.
 Validation du 2026-10-29 : 14 tests locaux reussis. Un preview reel sur le fork
 pilote a confirme `actions` et `python`, une entree GitHub Actions et cinq
 repertoires Terraform, avec toutes les mutations bloquees par le client de test.
-L'installation distante par le nouveau job doit encore etre verifiee apres
-publication de cette version. Aucun autre fork reel n'a encore servi a valider
-la detection ; les projets alternatifs sont couverts par les tests locaux.
+L'installation distante a ensuite ete verifiee sur le fork
+`ceai-cqen-labinfra-projects-ghas` : deux fichiers proposes, selection de `main`,
+Actions uniquement et references de bibliotheque figees. Voir la
+[preuve de ce deuxieme pilote](./preuves/preparation-projects.md). L'activation
+et les analyses de ce deuxieme fork restent bloquees par la facturation.
 
 ## References
 

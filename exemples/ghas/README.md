@@ -7,6 +7,9 @@ des demandes explicites. Le depot cluster est un pilote, pas une cible imposee.
 
 Voir [la preparation multi-depot](./preparation-multidepot.md) pour les modes
 preview/install, les permissions et les limites de la detection automatique.
+Le [bilan de validation](./bilan-validation.md) distingue les preuves du pilote
+des points restants. La [procedure de traitement](./traitement-alertes.md)
+decrit la consultation, le triage, la correction et la conservation des preuves.
 
 ## Bibliotheque
 
@@ -77,8 +80,11 @@ sur un simple push. Pour tester sans fusion, modifier et pousser le fichier
 `.github/workflows/ghas-pilot.yml` sur `feature/ghas-toolkit`. Ce pilote transmet
 explicitement le depot cible et les options au workflow central du meme commit.
 Changer `target_repository` dans ce fichier pour essayer un autre fork autorise.
-Le pilote est actuellement en mode `files_mode: preview`, sans activation des
-produits ni modification des variables. Un push de documentation seule ne le lance pas.
+Verifier les options du fichier avant chaque push : le 2026-11-04, le pilote
+local a ete remis en inspection sur le fork projects avec `files_mode: preview`,
+`enable_security: false` et `configure_variables: false`. Publier cette modification
+pour remplacer les anciennes demandes de mutation. Un push de documentation seule
+ne le lance pas. Une reexecution d'un ancien run conserve ses anciennes options.
 
 ### Activation explicite avant fusion
 
@@ -158,7 +164,8 @@ dans les journaux ou le depot.
 
 - Valider la preparation sur plusieurs projets et revoir les propositions.
 - Completer les profils CodeQL non encore automatises.
-- Valider Secret scanning, Push protection et les controles sur PR.
+- Revoir les preuves du pilote et publier la documentation.
+- Decider et tester les protections de branche si un blocage de fusion est exige.
 
 Secret scanning et Dependabot restent des services propres au fork ; ces deux
 workflows reutilisables ne les activent pas. Le nombre de licences n'est pas
@@ -167,6 +174,10 @@ garanti par la creation manuelle du fork.
 ## Preuves de validation
 
 - [Test CodeQL controle : detection et correction](./preuves/codeql-controlled-test.md)
+- [Preparation du deuxieme fork et blocage de facturation](./preuves/preparation-projects.md)
+- [Secret Scanning et Push Protection valides, preuves du test](./preuves/secret-scanning-controlled-test.md)
+- [Dependency Review : detection sur PR et retour au vert](./preuves/dependency-review-controlled-test.md)
+- [Dependabot : propositions Actions/Terraform et controles sur PR](./preuves/dependabot-validation.md)
 
 ## Documentation externe
 
