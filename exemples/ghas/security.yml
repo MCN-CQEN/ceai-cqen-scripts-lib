@@ -24,12 +24,12 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    uses: MCN-CQEN/ceai-cqen-scripts-lib/.github/workflows/ghas-codeql.yml@feature/ghas-toolkit
+    uses: MCN-CQEN/ceai-cqen-scripts-lib/.github/workflows/ghas-codeql.yml@221333ee22916ac85d18c6d3c604d02339e9b6cd
     with:
       languages: '["actions", "python"]'
 
   dependency-review:
     if: ${{ github.event_name == 'pull_request' && vars.DEPENDENCY_REVIEW_ENABLED == 'true' }}
-    uses: MCN-CQEN/ceai-cqen-scripts-lib/.github/workflows/ghas-dependency-review.yml@feature/ghas-toolkit
+    uses: MCN-CQEN/ceai-cqen-scripts-lib/.github/workflows/ghas-dependency-review.yml@221333ee22916ac85d18c6d3c604d02339e9b6cd
     with:
       fail-on-severity: low

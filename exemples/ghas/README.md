@@ -48,9 +48,11 @@ Un controle obligatoire doit etre configure separement dans les regles de branch
 7. Consulter les jobs de la PR et `Security > Code scanning` dans le fork.
    Un job reussi sans alerte ne prouve pas la detection d'un probleme controle.
 
-Les references a `feature/ghas-toolkit` de l'exemple manuel servent au pilote.
-Les fichiers generes automatiquement utilisent deja un SHA complet de la
-bibliotheque. Mettre ce SHA a jour deliberement pour adopter une nouvelle version.
+L'exemple manuel est fige au commit publie
+`221333ee22916ac85d18c6d3c604d02339e9b6cd`, qui contient les deux workflows
+reutilisables. Les fichiers generes automatiquement utilisent aussi un SHA
+complet de la bibliotheque. Mettre ces SHA a jour deliberement pour adopter une
+nouvelle version validee. Modifier l'exemple ne met pas a jour les forks existants.
 Aucun secret AWS, environnement de deploiement ou `secrets: inherit` n'est requis.
 Les workflows d'infrastructure herites doivent rester desactives dans le fork
 de test ; cette premiere etape ne les desactive pas automatiquement.

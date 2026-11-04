@@ -40,8 +40,10 @@ critere de reussite du test.
    Cette modification reste a publier. Avant integration finale de la
    bibliotheque, retirer le pilote temporaire au profit du lancement manuel.
 3. Stabiliser les references de workflows par SHA et traiter les alertes
-   preexistantes de references mutables. Le pilote cluster utilise encore des
-   appels sur `feature/ghas-toolkit`, tandis que le generateur produit des SHA.
+   preexistantes de references mutables. L'exemple manuel a ete fige localement
+   le 2026-11-04 au SHA publie `221333ee22916ac85d18c6d3c604d02339e9b6cd`.
+   Le generateur produit deja des SHA. Cette modification de l'exemple ne met
+   pas a jour les appels sur `feature/ghas-toolkit` du fork cluster existant.
 4. Revoir les anciens workflows ignores et les workflows d'infrastructure
    herites. Leur absence d'execution AWS n'est pas garantie par le kit.
 5. Si le blocage avant fusion est exige, configurer et tester les protections
