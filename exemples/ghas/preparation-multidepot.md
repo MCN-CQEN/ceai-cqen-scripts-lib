@@ -80,9 +80,11 @@ Pour installer, l'application doit avoir `Contents: Read and write` et
 est limite au fork et a ces permissions. Le mode preview ne demande que Contents
 en lecture. Chaque jeton est revoque a la fin du job.
 
-## Premiere verification sur branche
+## Premiere verification manuelle
 
-Dans `.github/workflows/ghas-pilot.yml`, choisir un fork autorise et conserver :
+Apres integration du workflow central sur la branche par defaut de la
+bibliotheque, ouvrir `Actions > GHAS - Prepare existing fork > Run workflow`.
+Saisir un fork autorise dans `target_repository` et conserver :
 
 ```yaml
 enable_security: false
@@ -90,12 +92,12 @@ configure_variables: false
 files_mode: preview
 ```
 
-Publier la modification sur `feature/ghas-toolkit`, puis consulter `GHAS - Branch
-pilot` dans la bibliotheque, resume `GHAS file preparation`. Apres revue,
-passer `files_mode` a `install` et publier ce changement pour creer la proposition
-dans le fork. Les essais sur d'autres forks changent uniquement `target_repository`.
-Apres integration du workflow central sur la branche par defaut, ces options
-seront accessibles via `Run workflow` sans modifier le pilote.
+Consulter le resume `GHAS file preparation`. Apres revue, lancer une nouvelle
+execution avec `files_mode: install` pour creer la proposition dans le fork.
+Les essais sur d'autres forks changent `target_repository`, apres autorisation
+de la GitHub App sur chaque cible. L'activation et les variables restent des
+options distinctes. Le workflow pilote temporaire utilise pendant les essais
+sur branche a ete retire ; il n'est pas necessaire pour ce lancement manuel.
 
 Le plan complet est conserve uniquement dans un fichier temporaire du runner,
 sans publication automatique d'un artefact. Le resume publie les langages,

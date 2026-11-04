@@ -37,8 +37,9 @@ critere de reussite du test.
    documentation n'a ete realise par l'agent pendant sa redaction.
 2. Le 2026-11-04, le pilote local a ete remis en inspection sur le deuxieme fork :
    `enable_security: false`, `configure_variables: false`, `files_mode: preview`.
-   Cette modification reste a publier. Avant integration finale de la
-   bibliotheque, retirer le pilote temporaire au profit du lancement manuel.
+   Le retour en inspection a ete publie et constate dans le resume fourni par
+   l'utilisateur. Le pilote temporaire est maintenant retire localement au
+   profit du lancement manuel apres integration ; ce retrait reste a publier.
 3. Stabiliser les references de workflows par SHA et traiter les alertes
    preexistantes de references mutables. L'exemple manuel a ete fige localement
    le 2026-11-04 au SHA publie `221333ee22916ac85d18c6d3c604d02339e9b6cd`.

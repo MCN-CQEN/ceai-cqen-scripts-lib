@@ -75,29 +75,20 @@ Configurer une fois dans les reglages Actions de la bibliotheque :
 Le jeton temporaire est limite au seul depot saisi et aux permissions de lecture
 demandees, puis revoque par l'action de creation du jeton en fin de job.
 
-### Test avant fusion
+### Fin du pilote temporaire
 
-Le workflow central n'a plus de cible cluster par defaut ni de declenchement
-sur un simple push. Pour tester sans fusion, modifier et pousser le fichier
-`.github/workflows/ghas-pilot.yml` sur `feature/ghas-toolkit`. Ce pilote transmet
-explicitement le depot cible et les options au workflow central du meme commit.
-Changer `target_repository` dans ce fichier pour essayer un autre fork autorise.
-Verifier les options du fichier avant chaque push : le 2026-11-04, le pilote
-local a ete remis en inspection sur le fork projects avec `files_mode: preview`,
-`enable_security: false` et `configure_variables: false`. Publier cette modification
-pour remplacer les anciennes demandes de mutation. Un push de documentation seule
-ne le lance pas. Une reexecution d'un ancien run conserve ses anciennes options.
+Le workflow temporaire `ghas-pilot.yml` a servi aux essais sur branche, puis a
+ete remis en lecture seule le 2026-11-04 et retire pour la livraison.
+Le workflow central n'a pas de cible par defaut ni de declenchement sur un push.
+Apres integration, utiliser le lancement manuel decrit ci-dessous.
+Les preuves historiques restent conservees. Ne pas relancer un ancien run pour
+une inspection : il conserve les anciennes options, y compris une activation.
 
-### Activation explicite avant fusion
+### Activation explicite
 
-Le workflow `.github/workflows/ghas-pilot.yml` appelle le workflow de preparation
-depuis le meme commit. Il s'execute uniquement lorsqu'un push sur
-`feature/ghas-toolkit` modifie ce fichier pilote. Par defaut, `enable_security`
-vaut `false` ; la preparation des fichiers depend de `files_mode`.
-
-Pour demander l'activation sans fusionner la PR, verifier la cible dans ce fichier,
-passer explicitement `enable_security` a `true`, puis committer et pousser ce
-changement. Cette operation peut consommer des licences. Elle exige la permission
+Lancer `GHAS - Prepare existing fork` avec une cible explicite et
+`enable_security: true` uniquement apres revue des licences et de la cible.
+Cette operation peut consommer des licences. Elle exige la permission
 Administration en ecriture de l'application et l'approbation des permissions
 sur son installation. Le token d'activation est limite au fork et a cette permission.
 
@@ -109,11 +100,9 @@ plusieurs causes ; le code ne presume pas laquelle. En cas de propagation differ
 verifier les reglages et relancer apres confirmation. Les fonctions deja actives
 ne sont pas desactivees et une activation partielle n'est pas annulee.
 
-Apres le test, remettre `enable_security: false` dans le pilote et pousser cette
-modification pour revenir aux inspections. Cela ne desactive pas les produits
-deja actives sur le fork. Une reexecution d'un ancien run conserve son ancien
-parametre : ne pas relancer un run d'activation pour effectuer une inspection.
-Ce pilote devra etre retire avant l'integration finale de la bibliotheque.
+Pour revenir aux inspections, lancer une nouvelle execution avec
+`enable_security: false`, `configure_variables: false` et `files_mode: preview`
+ou `none`. Cela ne desactive pas les produits deja actives sur le fork.
 
 ### Lancement manuel apres integration
 
@@ -129,8 +118,8 @@ l'activation apres verification des licences et de la cible.
 
 ### Creation automatique des variables
 
-Le parametre `configure_variables` vaut `false` par defaut. Le pilote peut le
-passer a `true` avec `enable_security: false` pour configurer un fork dont les
+Le parametre `configure_variables` vaut `false` par defaut. Le lancement manuel
+peut le passer a `true` avec `enable_security: false` pour configurer un fork dont les
 produits sont deja actives. Si une activation est demandee en meme temps et
 echoue, le job de configuration des variables n'est pas execute.
 
