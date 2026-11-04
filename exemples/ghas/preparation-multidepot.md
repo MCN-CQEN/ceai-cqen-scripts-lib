@@ -56,7 +56,10 @@ serialiser les donnees avec la bibliotheque standard et conserver les expression
 GitHub Actions telles quelles. Leurs extensions restent `.yml`.
 
 Les modifications sont proposees dans une branche
-`ghas/setup-<SHA-base-court>-<SHA-bibliotheque-court>`. Le workflow ne modifie pas
+`feature/ghas-setup-<SHA-base-court>-<SHA-bibliotheque-court>`. Le prefixe
+`feature/` respecte la regle GitFlow du pilote cluster vers `dev` ; les regles
+des autres depots restent a verifier. Les anciennes preuves conservent leur
+prefixe historique `ghas/setup-`. Le workflow ne modifie pas
 la branche par defaut, n'ouvre aucune PR, ne fusionne pas et ne lance pas les
 analyses. Un seul commit contient les fichiers proposes. Il peut remplacer le
 fichier appelant GHAS dans la proposition ; la version de la branche par defaut
