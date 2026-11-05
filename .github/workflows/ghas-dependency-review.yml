@@ -1,0 +1,26 @@
+# Compatibility adapter. New callers should use actions/ghas-dependency-review.
+name: Reusable GHAS - Dependency Review
+on:
+  workflow_call:
+    inputs:
+      fail-on-severity:
+        description: Minimum vulnerability severity that fails the check.
+        required: false
+        default: low
+        type: string
+permissions:
+  contents: read
+jobs:
+  dependency-review:
+    name: Dependency Review
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+      # Transitional ref: pin to the migration commit after publishing and testing.
+      - uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-dependency-review@feature/ghas-toolkit
+        with:
+          fail-on-severity: ${{ inputs.fail-on-severity }}

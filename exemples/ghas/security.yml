@@ -1,0 +1,47 @@
+# Caller example for migration tests. Replace the branch ref with the published
+# migration SHA in BOTH action uses before production; old SHAs lack these actions.
+name: GHAS - Security checks
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+  schedule:
+    - cron: '34 6 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ghas-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  codeql:
+    if: ${{ vars.CODEQL_ENABLED == 'true' }}
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, python]
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+      - uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-codeql@feature/ghas-toolkit
+        with:
+          language: ${{ matrix.language }}
+  dependency-review:
+    if: ${{ github.event_name == 'pull_request' && vars.DEPENDENCY_REVIEW_ENABLED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+      - uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-dependency-review@feature/ghas-toolkit
+        with:
+          fail-on-severity: low

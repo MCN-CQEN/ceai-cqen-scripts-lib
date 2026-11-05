@@ -1,0 +1,87 @@
+# Install in a TRUSTED administration repository, never in an untrusted PR job.
+# For migration tests only: pin action uses to the published migration SHA before production.
+name: Prepare a GHAS test fork
+on:
+  workflow_dispatch:
+    inputs:
+      target_repository:
+        description: Active fork (OWNER/REPO), same organization as the library.
+        required: true
+        type: string
+      library_sha:
+        description: Published full migration SHA containing the three composite actions.
+        required: true
+        type: string
+      enable_security:
+        description: Explicit activation request (may consume licenses).
+        default: false
+        type: boolean
+      configure_variables:
+        description: Configure fork scan variables.
+        default: false
+        type: boolean
+      files_mode:
+        description: No merges, no deployments.
+        default: preview
+        type: choice
+        options: [none, preview, install]
+permissions:
+  contents: read
+concurrency:
+  group: ghas-prepare-${{ inputs.target_repository }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Validate request before requesting an App token
+        id: target
+        uses: actions/github-script@v9
+        env:
+          TARGET: ${{ inputs.target_repository }}
+          SHA: ${{ inputs.library_sha }}
+        with:
+          script: |
+            const target = process.env.TARGET;
+            if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target)) throw new Error('Use OWNER/REPO.');
+            const [owner, repo] = target.split('/');
+            if (owner.toLowerCase() !== 'mcn-cqen' || repo.toLowerCase() === 'ceai-cqen-scripts-lib') {
+              throw new Error('Target must be another repository in the library organization.');
+            }
+            if (!/^[a-fA-F0-9]{40}$/.test(process.env.SHA)) throw new Error('Use a full published library SHA.');
+            core.setOutput('owner', owner);
+            core.setOutput('repo', repo);
+      - name: Create scoped token without variable management
+        if: ${{ !inputs.configure_variables }}
+        id: scoped
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repo }}
+          permission-administration: ${{ inputs.enable_security && 'write' || 'read' }}
+          permission-contents: ${{ inputs.files_mode == 'install' && 'write' || 'read' }}
+          permission-workflows: ${{ inputs.files_mode == 'install' && 'write' || '' }}
+      - name: Create variable-management token scoped to the target only
+        # v2 inherits installation permissions when none are specified.
+        if: ${{ inputs.configure_variables }}
+        id: variables
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repo }}
+      - name: Prepare verified fork
+        id: ghas
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@feature/ghas-toolkit
+        with:
+          target-repository: ${{ inputs.target_repository }}
+          library-repository: MCN-CQEN/ceai-cqen-scripts-lib
+          library-sha: ${{ inputs.library_sha }}
+          github-token: ${{ steps.scoped.outputs.token || steps.variables.outputs.token }}
+          enable-security: ${{ inputs.enable_security }}
+          configure-variables: ${{ inputs.configure_variables }}
+          files-mode: ${{ inputs.files_mode }}

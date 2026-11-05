@@ -1,0 +1,35 @@
+name: GHAS CodeQL
+description: Analyze the checked-out caller repository with CodeQL, one interpreted language per job.
+inputs:
+  language:
+    description: 'One of actions, python, ruby, javascript-typescript. The caller owns the matrix.'
+    required: true
+  queries:
+    description: CodeQL query suites.
+    required: false
+    default: security-extended,security-and-quality
+  category:
+    description: Optional SARIF category; defaults to /language:<language>.
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Validate CodeQL language
+      shell: bash
+      env:
+        GHAS_LANGUAGE: ${{ inputs.language }}
+      run: |
+        case "$GHAS_LANGUAGE" in
+          actions|python|ruby|javascript-typescript) ;;
+          *) echo "::error::Unsupported language. This action requires an interpreted-language profile, one language per job."; exit 1 ;;
+        esac
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ inputs.language }}
+        queries: ${{ inputs.queries }}
+    - name: Analyze caller repository
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: ${{ inputs.category || format('/language:{0}', inputs.language) }}
