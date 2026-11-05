@@ -1,5 +1,11 @@
 # Bilan de validation GHAS
 
+> Mise a jour du 2026-11-05 : ce bilan decrit le pilote historique base sur les
+> workflows reutilisables. Le kit a ete migre localement vers des actions composites
+> sous `actions/`. Les tests GitHub de cette nouvelle integration restent a faire ;
+> voir [migration et plan de test](./migration-actions.md). Les preuves ci-dessous
+> ne doivent pas etre presentees comme une validation distante de la migration.
+
 Etat du pilote au 2026-11-03. Cible :
 `MCN-CQEN/ceai-cqen-labinfra-cluster-ghas`, branche par defaut `dev`.
 Ce bilan ne vaut pas activation sur le depot source ni validation de tous les

@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 
 
-MODULE = Path(__file__).resolve().parents[2] / "scripts/ghas/prepare_files.py"
+MODULE = Path(__file__).resolve().parents[2] / "actions/ghas-prepare-fork/prepare_files.py"
 SPEC = importlib.util.spec_from_file_location("prepare_files", MODULE)
 kit = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(kit)
@@ -70,9 +70,12 @@ class PreparationTests(unittest.TestCase):
         files = kit.render(kit.inventory(["src/main.py"]), "integration/test", LIBRARY, SHA)
         workflow = json.loads(files[kit.WORKFLOW])
         self.assertEqual(workflow["on"]["push"]["branches"], ["integration/test"])
-        self.assertEqual(json.loads(workflow["jobs"]["codeql"]["with"]["languages"]), ["actions", "python"])
+        self.assertEqual(workflow["jobs"]["codeql"]["strategy"]["matrix"]["language"], ["actions", "python"])
         for job in workflow["jobs"].values():
-            self.assertTrue(job["uses"].endswith("@" + SHA))
+            self.assertNotIn("uses", job)
+            self.assertEqual(job["runs-on"], "ubuntu-24.04")
+            self.assertTrue(job["steps"][-1]["uses"].endswith("@" + SHA))
+            self.assertIn("/actions/ghas-", job["steps"][-1]["uses"])
         self.assertNotIn("secrets", workflow["jobs"]["codeql"])
         self.assertNotIn("id-token", workflow["permissions"])
 

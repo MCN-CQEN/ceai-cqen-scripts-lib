@@ -1,0 +1,33 @@
+name: GHAS Dependency Review
+description: Review vulnerable dependencies introduced by the caller pull request.
+inputs:
+  fail-on-severity:
+    description: Minimum severity that fails the check (low, moderate, high, critical).
+    required: false
+    default: low
+  repo-token:
+    description: Token for the caller repository; normally the caller GITHUB_TOKEN.
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - name: Validate pull request context and threshold
+      shell: bash
+      env:
+        GHAS_EVENT: ${{ github.event_name }}
+        GHAS_SEVERITY: ${{ inputs.fail-on-severity }}
+      run: |
+        if [[ "$GHAS_EVENT" != pull_request ]]; then
+          echo "::error::Dependency Review must run on pull_request in an unprivileged caller job."
+          exit 1
+        fi
+        case "$GHAS_SEVERITY" in
+          low|moderate|high|critical) ;;
+          *) echo "::error::Invalid fail-on-severity."; exit 1 ;;
+        esac
+    - name: Review dependency changes
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: ${{ inputs.fail-on-severity }}
+        repo-token: ${{ inputs.repo-token }}

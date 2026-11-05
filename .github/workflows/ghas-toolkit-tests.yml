@@ -6,11 +6,21 @@ on:
     paths:
       - scripts/ghas/**
       - tests/ghas/**
+      - actions/ghas-*/**
+      - exemples/ghas/*.yml
+      - .github/workflows/ghas-codeql.yml
+      - .github/workflows/ghas-dependency-review.yml
+      - .github/workflows/ghas-prepare-fork.yml
       - .github/workflows/ghas-toolkit-tests.yml
   pull_request:
     paths:
       - scripts/ghas/**
       - tests/ghas/**
+      - actions/ghas-*/**
+      - exemples/ghas/*.yml
+      - .github/workflows/ghas-codeql.yml
+      - .github/workflows/ghas-dependency-review.yml
+      - .github/workflows/ghas-prepare-fork.yml
       - .github/workflows/ghas-toolkit-tests.yml
 
 permissions:
@@ -24,4 +34,8 @@ jobs:
       - uses: actions/checkout@v7.0.0
         with:
           persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install -r tests/ghas/requirements.txt
       - run: python3 -m unittest discover -s tests/ghas -v

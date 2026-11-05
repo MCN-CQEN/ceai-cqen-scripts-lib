@@ -1,132 +1,119 @@
 # Preparation de plusieurs forks
 
-Le workflow central recoit toujours un `target_repository` explicite au format
-`ORG/fork`. La cible doit etre un fork GitHub actif de la meme organisation que
-la bibliotheque. L'application doit etre installee sur cette cible. Aucun acces
-aux secrets AWS du projet, aucun checkout du fork et aucune execution de son
-code ne sont necessaires pour l'inventaire.
+L'action `actions/ghas-prepare-fork` recoit une cible explicite
+`target-repository: ORG/fork` et un jeton fourni par le workflow appelant.
+Ce jeton doit etre limite au seul fork. La cible doit etre un fork actif de la
+meme organisation que `library-repository`, pas un depot source ni la bibliotheque.
 
-## Options independantes
+Le code du fork n'est jamais checkout ou execute. Les scripts distribues avec
+l'action sont appeles par `github.action_path`. Il n'est pas necessaire de
+checkout la bibliotheque dans le depot appelant.
+
+## Responsabilites du caller
+
+Le [workflow d'exemple](./prepare-fork.yml) est installe dans un depot
+d'administration de confiance, pas dans les analyses de PR. Il definit le
+declenchement manuel, le runner, les permissions, les secrets, la creation du
+jeton et la concurrence par cible. Ne pas lancer deux cycles de recreation du
+meme fork en parallele.
+
+La cle PEM reste un secret du depot d'administration. L'action recoit seulement
+le jeton temporaire. Voir les [permissions detaillees](../../actions/ghas-prepare-fork/README.md).
+
+## Options de l'action
 
 | Option | Defaut | Effet |
 | --- | --- | --- |
-| `target_repository` | Aucun | Fork a preparer |
-| `enable_security` | `false` | Demande d'activation des produits, potentiellement facturable |
-| `configure_variables` | `false` | Verification des prerequis et configuration des deux variables |
-| `files_mode` | `none` | `none`, `preview` ou `install` |
+| `target-repository` | Aucun | Fork a preparer |
+| `library-repository` | Aucun | Bibliotheque de la meme organisation |
+| `library-sha` | Vide | SHA complet publie contenant les actions, obligatoire en preview/install |
+| `enable-security` | `false` | Demande d'activation potentiellement facturable |
+| `configure-variables` | `false` | Configure les variables apres verification |
+| `files-mode` | `none` | `none`, `preview` ou `install` |
 
-Les options d'activation, de variables et de fichiers sont independantes.
-L'installation des fichiers ne vaut pas activation des produits et ne prouve
-pas la reussite des analyses. Un fichier appele peut exister avec une variable
-`false`, auquel cas le controle est ignore.
+Les chaines booleennes doivent etre exactement `true` ou `false`. L'action
+inspecte d'abord puis traite activation, variables et fichiers dans cet ordre.
+Une activation incomplete fait echouer l'action et empeche les operations
+suivantes. Les mutations deja acceptees ne sont pas annulees.
+L'installation ne vaut pas activation ni reussite d'analyse.
 
-## Inventaire et proposition
+## Inventaire
 
-`preview` lit l'arbre Git de la branche par defaut du fork sans le modifier.
-Il detecte les fichiers Python, Ruby et JavaScript/TypeScript, et ajoute Actions
-car le kit installe lui-meme un workflow. Les langages compilables sont signales
-comme necessitant un profil non encore automatise par ce kit ; cela ne signifie
-pas qu'ils ne sont pas pris en charge par CodeQL.
+Le preview lit l'arbre de la branche par defaut du fork sans le modifier.
+Il detecte Python, Ruby et JavaScript/TypeScript, et ajoute Actions pour le
+workflow installe. Les langages compiles sont signales comme profils non
+automatises, pas comme langages incompatibles avec CodeQL.
 
-Dependabot est propose pour les manifestes npm, pip, Bundler, Go modules, Maven,
-Gradle, Cargo, Composer et NuGet reconnus par nom ou extension, ainsi que les
-repertoires Terraform contenant des `.tf`. Les repertoires sont propres au fork,
-sans chemins cluster predefinis. Les entrees sont dedupliquees et hebdomadaires.
+Dependabot est propose pour npm, pip, Bundler, Go modules, Maven, Gradle, Cargo,
+Composer et NuGet reconnus par nom/extension, ainsi que les repertoires Terraform.
+Les chemins sont derives du projet, sans chemins cluster imposes.
+`vendor`, `node_modules`, `.venv`, `venv`, `dist` et `build` sont ignores.
+Un arbre tronque ou plus de 100 couples ecosysteme/repertoire bloque la generation.
 
-Les repertoires `vendor`, `node_modules`, `.venv`, `venv`, `dist` et `build` sont
-ignores pour l'inventaire. Cet inventaire est une heuristique, pas une analyse
-du contenu des manifestes. Les variantes de gestionnaires (par exemple uv), les
-registres prives, les sous-modules et les ecosystemes non listes necessitent
-une revue. La presence d'un manifeste ne garantit pas des alertes de vulnerabilite.
-Un arbre Git tronque ou plus de 100 couples ecosysteme/repertoire bloque la
-generation plutot que d'omettre silencieusement une partie du projet.
+Cet inventaire reste une heuristique : uv, registres prives, sous-modules et
+autres variantes demandent une revue. La presence d'un manifeste ne garantit
+pas la couverture de ses vulnerabilites.
 
-## Installation dans une branche de proposition
+## Fichiers et proposition
 
-`install` genere :
+Le generateur produit :
 
-- `.github/workflows/ghas-security.yml`, avec les langages detectes, la vraie
-  branche par defaut du fork et les appels de bibliotheque figes au SHA utilise ;
-- `.github/dependabot.yml`, uniquement si aucun fichier `dependabot.yml` ou
-  `dependabot.yaml` n'existe deja dans `.github`. Une configuration existante
-  est preservee et sa couverture doit etre revue.
+- `.github/workflows/ghas-security.yml` avec des jobs locaux : evenements,
+  runners, permissions, matrice, checkout puis appels aux actions composites
+  au `library-sha` fourni. Aucun appel de job a un workflow reutilisable.
+- `.github/dependabot.yml`, sauf si `dependabot.yml` ou `dependabot.yaml`
+  existe deja dans `.github`. Une configuration existante est preservee.
 
-Les documents generes utilisent JSON, un sous-ensemble valide de YAML, pour
-serialiser les donnees avec la bibliotheque standard et conserver les expressions
-GitHub Actions telles quelles. Leurs extensions restent `.yml`.
+La serialisation JSON est un sous-ensemble valide de YAML ; les extensions
+restent `.yml`. Les expressions GitHub Actions sont preservees.
 
-Les modifications sont proposees dans une branche
-`feature/ghas-setup-<SHA-base-court>-<SHA-bibliotheque-court>`. Le prefixe
-`feature/` respecte la regle GitFlow du pilote cluster vers `dev` ; les regles
-des autres depots restent a verifier. Les anciennes preuves conservent leur
-prefixe historique `ghas/setup-`. Le workflow ne modifie pas
-la branche par defaut, n'ouvre aucune PR, ne fusionne pas et ne lance pas les
-analyses. Un seul commit contient les fichiers proposes. Il peut remplacer le
-fichier appelant GHAS dans la proposition ; la version de la branche par defaut
-reste intacte tant que la proposition n'est pas fusionnee.
+Le mode install cree un commit dans
+`feature/ghas-setup-<SHA-base-court>-<SHA-bibliotheque-court>`.
+Le prefixe `feature/` convient au GitFlow du pilote cluster vers dev, pas
+necessairement aux regles de tous les depots.
+Une proposition identique est reusee ; une proposition modifiee est refusee
+sans force-push. La branche par defaut n'est jamais mise a jour ou fusionnee.
+Le generateur peut remplacer le workflow GHAS dans la proposition : examiner
+le diff avant fusion. Il n'ouvre pas de PR et ne lance pas d'analyse distante.
 
-Le resume fournit un lien de comparaison. Une proposition identique est reusee.
-Une proposition existante avec des modifications differentes est refusee,
-sans force-push. Aucune modification n'est necessaire si la branche par defaut
-contient deja le workflow attendu ; Dependabot existant reste preserve.
+Le mode preview ne cree ni commit, ni branche, ni blob ; il ne fait que des GET
+si activation et variables restent desactivees. Les sorties `proposal-branch`
+et `compare-url` sont vides dans ce cas.
 
-Avant de fusionner dans le fork, verifier les doublons avec les anciens workflows
-de securite et desactiver les workflows de deploiement herites. Un push vers la
-branche par defaut peut sinon lancer des workflows d'infrastructure. Cette
-version ne les desactive pas automatiquement et ne demande jamais leur execution.
+## Installation et verifications
 
-Pour installer, l'application doit avoir `Contents: Read and write` et
-`Workflows: Read and write`, approuves sur l'installation. Le jeton de preparation
-est limite au fork et a ces permissions. Le mode preview ne demande que Contents
-en lecture. Chaque jeton est revoque a la fin du job.
+1. Publier un commit contenant les nouvelles actions. L'ancien SHA du pilote
+   ne suffit pas. Pour les tests de migration, conserver la branche de travail ;
+   avant livraison, figer aussi les appels des exemples/adaptateurs.
+2. Installer l'exemple d'administration dans un depot autorise. Renseigner le
+   fork cible et le SHA de bibliotheque, puis lancer preview avec les mutations
+   desactivees.
+3. Revoir le resume, les licences et la couverture. Lancer une nouvelle execution
+   en install uniquement apres approbation.
+4. Examiner la proposition, les anciens workflows de securite et les workflows
+   d'infrastructure. Ces derniers ne sont pas desactives automatiquement.
+5. Configurer explicitement les produits et variables si necessaire, sans
+   demander d'activation sur le depot source. Dependabot version updates reste
+   a activer sur chaque nouveau fork.
+6. Tester les controles sur une PR et conserver les preuves par ID de depot,
+   commit et date. Exporter avant suppression/recreation sous le meme nom.
 
-## Premiere verification manuelle
+Le resume publie des metadonnees : cible, ID, langages et nombres de repertoires.
+Les journaux sont publics si le workflow appelant l'est. Utiliser un depot
+d'administration prive pour les informations confidentielles. Aucun plan complet
+de fichiers n'est televerse comme artefact par l'action.
 
-Apres integration du workflow central sur la branche par defaut de la
-bibliotheque, ouvrir `Actions > GHAS - Prepare existing fork > Run workflow`.
-Saisir un fork autorise dans `target_repository` et conserver :
-
-```yaml
-enable_security: false
-configure_variables: false
-files_mode: preview
-```
-
-Consulter le resume `GHAS file preparation`. Apres revue, lancer une nouvelle
-execution avec `files_mode: install` pour creer la proposition dans le fork.
-Les essais sur d'autres forks changent `target_repository`, apres autorisation
-de la GitHub App sur chaque cible. L'activation et les variables restent des
-options distinctes. Le workflow pilote temporaire utilise pendant les essais
-sur branche a ete retire ; il n'est pas necessaire pour ce lancement manuel.
-
-Le plan complet est conserve uniquement dans un fichier temporaire du runner,
-sans publication automatique d'un artefact. Le resume publie les langages,
-les nombres de repertoires par ecosysteme et le lien de proposition, sans contenu
-source ni liste complete des chemins. La bibliotheque etant publique, ses resumes
-et journaux le sont aussi : utiliser un orchestrateur prive si ces metadonnees
-doivent rester confidentielles.
-
-## Verification locale
+## Validation
 
 ```bash
+python3 -m pip install -r tests/ghas/requirements.txt
 python3 -m unittest discover -s tests/ghas -v
 ```
 
-Les tests couvrent les projets differents du cluster, la generation des references
-immuables, les restrictions de cible, la preservation de Dependabot, l'absence
-d'ecriture en preview et la creation/reutilisation d'une proposition sans mise
-a jour de la branche par defaut.
+Les tests verifient inventaire, SHA, garde de cible, mode lecture seule,
+variables, erreurs d'activation, idempotence et contrats des actions.
+Le [plan de migration](./migration-actions.md) couvre les essais GitHub restants.
 
-Validation du 2026-10-29 : 14 tests locaux reussis. Un preview reel sur le fork
-pilote a confirme `actions` et `python`, une entree GitHub Actions et cinq
-repertoires Terraform, avec toutes les mutations bloquees par le client de test.
-L'installation distante a ensuite ete verifiee sur le fork
-`ceai-cqen-labinfra-projects-ghas` : deux fichiers proposes, selection de `main`,
-Actions uniquement et references de bibliotheque figees. Voir la
-[preuve de ce deuxieme pilote](./preuves/preparation-projects.md). L'activation
-et les analyses de ce deuxieme fork restent bloquees par la facturation.
-
-## References
-
-- [Options Dependabot](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference)
-- [Modes CodeQL pour les langages compiles](https://docs.github.com/en/code-security/concepts/code-scanning/codeql/codeql-for-compiled-languages)
+Les [preuves du deuxieme fork](./preuves/preparation-projects.md) restent
+historiques : elles portent sur l'ancien generateur et conservent leur prefixe
+`ghas/setup-`. Elles ne prouvent pas l'installation des actions composites.

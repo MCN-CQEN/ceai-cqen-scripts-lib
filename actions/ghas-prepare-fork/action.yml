@@ -1,0 +1,54 @@
+name: GHAS Prepare Fork
+description: Inspect a verified fork and optionally enable security, configure variables or propose files.
+inputs:
+  target-repository:
+    description: Existing active GitHub fork (OWNER/REPO).
+    required: true
+  library-repository:
+    description: Trusted library (OWNER/REPO), in the same organization as the target.
+    required: true
+  library-sha:
+    description: Published full library commit containing these actions; required for preview/install.
+    required: false
+    default: ''
+  github-token:
+    description: Short-lived App installation token scoped by the caller to the target fork only.
+    required: true
+  enable-security:
+    description: Explicit activation request, may consume licenses. String true or false.
+    required: false
+    default: 'false'
+  configure-variables:
+    description: Configure scan variables after checking prerequisites. String true or false.
+    required: false
+    default: 'false'
+  files-mode:
+    description: none, preview (read-only) or install (proposal branch only).
+    required: false
+    default: none
+outputs:
+  repository-id:
+    description: GitHub repository ID identifying this fork lifecycle.
+    value: ${{ steps.prepare.outputs.repository-id }}
+  proposal-branch:
+    description: Branch created or reused in install mode, empty otherwise.
+    value: ${{ steps.prepare.outputs.proposal-branch }}
+  compare-url:
+    description: Proposal comparison URL, empty outside install mode.
+    value: ${{ steps.prepare.outputs.compare-url }}
+runs:
+  using: composite
+  steps:
+    - name: Inspect fork and execute explicit requests
+      id: prepare
+      shell: bash
+      env:
+        GHAS_ACTION_PATH: ${{ github.action_path }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        GHAS_TARGET: ${{ inputs.target-repository }}
+        GHAS_LIBRARY: ${{ inputs.library-repository }}
+        GHAS_LIBRARY_SHA: ${{ inputs.library-sha }}
+        GHAS_ENABLE_SECURITY: ${{ inputs.enable-security }}
+        GHAS_CONFIGURE_VARIABLES: ${{ inputs.configure-variables }}
+        GHAS_FILES_MODE: ${{ inputs.files-mode }}
+      run: python3 "$GHAS_ACTION_PATH/prepare_fork.py"

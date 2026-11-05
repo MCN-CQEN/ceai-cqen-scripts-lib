@@ -1,178 +1,101 @@
-# Kit GHAS pour les forks de test
+# Actions GHAS reutilisables
 
-Cette version centralise CodeQL et Dependency Review. Elle fournit une inspection
-du fork et un mode explicite d'activation des fonctions de securite. Elle ne cree
-pas de fork. La creation des variables et l'installation des fichiers exigent
-des demandes explicites. Le depot cluster est un pilote, pas une cible imposee.
+Le kit suit la structure des autres bibliotheques du depot : chaque composant
+reutilisable possede un `action.yml` composite et un README sous `actions/`.
+Les workflows des depots consommateurs appellent ces actions dans leurs steps.
 
-Voir [la preparation multi-depot](./preparation-multidepot.md) pour les modes
-preview/install, les permissions et les limites de la detection automatique.
-Le [bilan de validation](./bilan-validation.md) distingue les preuves du pilote
-des points restants. La [procedure de traitement](./traitement-alertes.md)
-decrit la consultation, le triage, la correction et la conservation des preuves.
+## Composants
 
-## Bibliotheque
+| Action | Responsabilite | Documentation |
+| --- | --- | --- |
+| `actions/ghas-codeql` | Init et analyse du code checkout, un langage par job | [README](../../actions/ghas-codeql/README.md) |
+| `actions/ghas-dependency-review` | Controle des dependances introduites par une PR | [README](../../actions/ghas-dependency-review/README.md) |
+| `actions/ghas-prepare-fork` | Inspection et preparation explicite d'un fork via API | [README](../../actions/ghas-prepare-fork/README.md) |
 
-Les workflows `.github/workflows/ghas-codeql.yml` et
-`.github/workflows/ghas-dependency-review.yml` utilisent `workflow_call` uniquement.
-Ils ne se declenchent pas automatiquement dans la bibliotheque. Le checkout
-recupere le depot appelant et les resultats sont associes a ce depot.
+Les actions ne declarent ni evenements, ni runner, ni permissions de job.
+Ces choix appartiennent au workflow appelant, de meme que le checkout,
+la matrice, les conditions et les secrets. Aucune action de scan n'a besoin
+de la cle GitHub App, d'un environnement AWS ou de `secrets: inherit`.
 
-Le pilote CodeQL couvre `actions` et `python`. Le parametre `languages` est un
-tableau JSON. Les langages necessitant une compilation devront faire l'objet
-d'un profil de construction adapte avant utilisation ; cette version ne fournit
-pas d'etape de compilation. Les suites de requetes sont centralisees directement
-dans le workflow, sans fichier de configuration externe prive a telecharger.
+## Exemples appelants
 
-Dependency Review ne s'execute que sur une pull request. Son seuil par defaut
-est `low`, donc toute vulnerabilite connue introduite peut faire echouer le job.
-Un controle obligatoire doit etre configure separement dans les regles de branche.
+- [security.yml](./security.yml) : workflow a installer dans le fork analyse.
+  CodeQL tourne sur PR, push vers les branches choisies, calendrier et lancement
+  manuel ; Dependency Review est limite aux PR.
+- [prepare-fork.yml](./prepare-fork.yml) : workflow manuel a installer dans un
+  depot d'administration de confiance. Il fournit le jeton cible a l'action
+  de preparation. La cle PEM reste dans ce depot d'administration, pas dans les forks.
 
-## Essai dans le fork
+Les exemples et adaptateurs utilisent temporairement `@feature/ghas-toolkit`
+pour tester les nouvelles actions. L'ancien SHA
+`221333ee22916ac85d18c6d3c604d02339e9b6cd` ne contient pas ces actions et ne
+peut pas servir de reference pour la migration. Apres publication et essais,
+figer tous ces appels sur le SHA complet du commit de migration valide avant
+integration. Le generateur produit deja des appels par SHA complet.
 
-1. Publier la branche `feature/ghas-toolkit` de la bibliotheque.
-2. La bibliotheque est publique : aucun partage de workflows prives n'est requis.
-   Verifier que les politiques Actions du fork autorisent ces workflows.
-3. Verifier que Code Security et le dependency graph sont effectivement actifs
-   dans le fork. Une politique d'entreprise ou une licence manquante reste bloquante.
-4. Utiliser `files_mode: preview`, puis `files_mode: install` pour generer les
-   fichiers adaptes au projet dans une branche du fork. L'exemple `security.yml`
-   reste utilisable pour une installation manuelle du pilote uniquement.
-5. Utiliser `configure_variables: true` dans le workflow central pour creer les
-   variables de depot `CODEQL_ENABLED` et `DEPENDENCY_REVIEW_ENABLED` selon les
-   prerequis constates. Aucun ajout manuel dans le fork n'est necessaire.
-   L'ancienne variable `GHAS_ENABLED` n'est pas utilisee par ce nouvel exemple.
-6. Ouvrir une PR dans le fork pour tester les deux controles. Une execution
-   manuelle teste CodeQL uniquement. Le workflow doit exister sur la branche par
-   defaut pour etre lance depuis l'interface et pour les executions planifiees.
-7. Consulter les jobs de la PR et `Security > Code scanning` dans le fork.
-   Un job reussi sans alerte ne prouve pas la detection d'un probleme controle.
+## Preparation d'un nouveau fork
 
-L'exemple manuel est fige au commit publie
-`221333ee22916ac85d18c6d3c604d02339e9b6cd`, qui contient les deux workflows
-reutilisables. Les fichiers generes automatiquement utilisent aussi un SHA
-complet de la bibliotheque. Mettre ces SHA a jour deliberement pour adopter une
-nouvelle version validee. Modifier l'exemple ne met pas a jour les forks existants.
-Aucun secret AWS, environnement de deploiement ou `secrets: inherit` n'est requis.
-Les workflows d'infrastructure herites doivent rester desactives dans le fork
-de test ; cette premiere etape ne les desactive pas automatiquement.
+1. Creer manuellement le fork dans la meme organisation que la bibliotheque.
+2. Autoriser la GitHub App sur cette nouvelle cible. Une recreation sous le meme
+   nom cree un nouveau depot : reverifier l'installation et conserver son ID.
+3. Dans le depot d'administration, configurer `GHAS_APP_ID` (variable) et
+   `GHAS_APP_PRIVATE_KEY` (secret PEM), puis limiter le jeton au fork cible.
+4. Lancer une inspection/preview : `enable-security: false`,
+   `configure-variables: false`, `files-mode: preview`.
+   Fournir dans `library-sha` un commit publie contenant les nouvelles actions.
+5. Examiner le resume, les langages et manifestes proposes. Les fichiers sont
+   seulement proposes, pas installes. Revoir licences, politiques et permissions.
+6. Apres autorisation, demander separement ou ensemble l'activation, les variables
+   et `files-mode: install`. Une activation incomplete arrete les operations
+   suivantes dans la nouvelle action ; les mutations deja acceptees restent.
+7. Examiner la branche `feature/ghas-setup-...`. Desactiver les workflows de
+   deploiement herites et verifier les regles GitFlow avant toute fusion.
+8. Installer les fichiers dans le fork selon votre procedure de PR ; activer les
+   mises a jour de versions Dependabot sur le fork. L'action ne les active pas.
+9. Verifier les analyses et les alertes dans le depot analyse. Un job vert prouve
+   l'execution, pas l'absence de risques ni un blocage obligatoire de fusion.
+10. Exporter les preuves dans un emplacement approuve avant toute suppression
+    du fork. Les liens seuls ne permettent plus de les consulter apres suppression.
 
-## Verification centrale de la GitHub App
+Voir [preparation multi-depot](./preparation-multidepot.md) pour l'inventaire,
+les propositions et les limites. Les licences ne sont pas garanties par le nom
+ou la creation manuelle d'un fork ; aucune politique d'entreprise n'est contournee.
 
-Le workflow `.github/workflows/ghas-prepare-fork.yml` fournit par defaut une
-inspection en lecture seule. Le mode d'activation exige `enable_security: true`.
-La configuration des variables exige `configure_variables: true`. La preparation
-des fichiers utilise `files_mode`. Il exige un veritable fork GitHub appartenant a la meme organisation
-que la bibliotheque ; une copie independante du code sera refusee.
+## Compatibilite temporaire
 
-Configurer une fois dans les reglages Actions de la bibliotheque :
+Les workflows `.github/workflows/ghas-codeql.yml`,
+`ghas-dependency-review.yml` et `ghas-prepare-fork.yml` restent presents comme
+adaptateurs pour les appels existants. Leur logique est deleguee aux actions ;
+ils ne sont plus l'interface conseillee pour les nouveaux depots.
+Le workflow de preparation historique conserve le bouton manuel apres
+integration, mais reste limite a la bibliotheque pour la gestion de ses credentials.
+Un autre depot d'administration utilise directement l'action composite.
 
-- Variable de depot `GHAS_APP_ID` : identifiant numerique de l'application.
-- Secret de depot `GHAS_APP_PRIVATE_KEY` : contenu complet de la cle PEM.
-- Installation de l'application autorisee sur le fork cible, avec au minimum
-  les permissions Administration et Contents en lecture pour cette inspection.
+Le script `scripts/ghas/prepare_files.py` reste une entree CLI de compatibilite.
+L'implementation est maintenant dans `actions/ghas-prepare-fork/`.
+Aucun workflow pilote automatique specifique a un fork n'est ajoute.
 
-Le jeton temporaire est limite au seul depot saisi et aux permissions de lecture
-demandees, puis revoque par l'action de creation du jeton en fin de job.
+## Validation et exploitation
 
-### Fin du pilote temporaire
+Le [plan de migration et de tests](./migration-actions.md) distingue les nouveaux
+tests locaux des validations distantes encore necessaires. Les preuves du pilote
+historique ne valent pas validation des nouvelles actions composites.
 
-Le workflow temporaire `ghas-pilot.yml` a servi aux essais sur branche, puis a
-ete remis en lecture seule le 2026-11-04 et retire pour la livraison.
-Le workflow central n'a pas de cible par defaut ni de declenchement sur un push.
-Apres integration, utiliser le lancement manuel decrit ci-dessous.
-Les preuves historiques restent conservees. Ne pas relancer un ancien run pour
-une inspection : il conserve les anciennes options, y compris une activation.
+- [Bilan historique du pilote](./bilan-validation.md)
+- [Traitement des alertes](./traitement-alertes.md)
+- [CodeQL : detection et correction](./preuves/codeql-controlled-test.md)
+- [Secret Scanning et Push Protection](./preuves/secret-scanning-controlled-test.md)
+- [Dependency Review : detection et retour au vert](./preuves/dependency-review-controlled-test.md)
+- [Dependabot et controles sur PR](./preuves/dependabot-validation.md)
+- [Deuxieme fork et blocage de facturation](./preuves/preparation-projects.md)
 
-### Activation explicite
+Les metadonnees de forks prives ne doivent etre publiees dans cette bibliotheque
+publique qu'apres autorisation. Les langages compiles, registres prives et
+manifestes non reconnus demandent une adaptation. Le prototype ne garantit pas
+l'analyse de tous les projets sans revue.
 
-Lancer `GHAS - Prepare existing fork` avec une cible explicite et
-`enable_security: true` uniquement apres revue des licences et de la cible.
-Cette operation peut consommer des licences. Elle exige la permission
-Administration en ecriture de l'application et l'approbation des permissions
-sur son installation. Le token d'activation est limite au fork et a cette permission.
+## References
 
-Le job d'activation tente d'activer Code Security, Secret scanning, puis Push
-protection, et relit les reglages. Il ne contourne pas les politiques de
-l'entreprise ou la facturation. Le resume `GHAS activation` presente les etats
-avant/apres et les requetes acceptees ou refusees. Un refus HTTP peut avoir
-plusieurs causes ; le code ne presume pas laquelle. En cas de propagation differee,
-verifier les reglages et relancer apres confirmation. Les fonctions deja actives
-ne sont pas desactivees et une activation partielle n'est pas annulee.
-
-Pour revenir aux inspections, lancer une nouvelle execution avec
-`enable_security: false`, `configure_variables: false` et `files_mode: preview`
-ou `none`. Cela ne desactive pas les produits deja actives sur le fork.
-
-### Lancement manuel apres integration
-
-Pour rendre le bouton `Run workflow` disponible, le fichier de preparation doit
-exister sur la branche par defaut de la bibliotheque. Apres publication de la
-branche de travail, integrer ce fichier par la procedure de revue habituelle.
-Depuis Actions, lancer `GHAS - Prepare existing fork` avec
-`MCN-CQEN/ceai-cqen-labinfra-cluster-ghas` comme cible. Consulter le resume de
-l'execution pour les etats renvoyes par GitHub.
-
-Laisser `enable_security` decoche pour une inspection, ou le cocher pour demander
-l'activation apres verification des licences et de la cible.
-
-### Creation automatique des variables
-
-Le parametre `configure_variables` vaut `false` par defaut. Le lancement manuel
-peut le passer a `true` avec `enable_security: false` pour configurer un fork dont les
-produits sont deja actives. Si une activation est demandee en meme temps et
-echoue, le job de configuration des variables n'est pas execute.
-
-Verifier dans la GitHub App la permission de depot `Variables: Read and write`,
-ainsi que `Administration: Read` et `Contents: Read`, et faire approuver les
-permissions sur son installation. Le jeton de ce job herite des permissions de
-l'installation, mais reste limite au fork selectionne. Il est revoque en fin
-de job. Les jobs d'inspection et d'activation conservent leurs jetons distincts.
-
-`CODEQL_ENABLED` vaut `true` si Code Security est confirme actif ou si le depot
-est public. `DEPENDENCY_REVIEW_ENABLED` vaut `true` seulement si ce prerequis
-est satisfait et si l'API de comparaison des dependances est accessible. Le
-workflow compare le commit courant de la branche par defaut a lui-meme : ce
-test verifie l'acces, pas la detection d'une vulnerabilite. GitHub documente
-notamment un refus HTTP 403 possible sur les forks. Un echec laisse cette
-variable a `false` ; il ne prouve pas a lui seul que le dependency graph est
-desactive. Ce job n'active pas le dependency graph.
-
-Les variables absentes sont creees, celles existantes sont mises a jour si
-necessaire, puis relues. Le resume `GHAS fork variables` indique les valeurs
-demandees et enregistrees. Une valeur `false` est un resultat possible meme
-si le job reussit : le controle correspondant reste desactive. Un refus de
-creation ou une incoherence de relecture fait echouer le job et peut laisser
-une configuration partielle. Verifier alors les deux variables avant de relancer.
-
-Un succes confirme l'authentification, l'acces et le lien de fork, pas l'activation
-GHAS ou les permissions d'ecriture. `not reported` signifie que GitHub n'a pas
-fourni l'etat, et non que la fonction est desactivee. Les politiques et licences
-restent a verifier avant toute activation. Aucun jeton ni cle ne doit etre copie
-dans les journaux ou le depot.
-
-## Etapes suivantes
-
-- Valider la preparation sur plusieurs projets et revoir les propositions.
-- Completer les profils CodeQL non encore automatises.
-- Revoir les preuves du pilote et publier la documentation.
-- Decider et tester les protections de branche si un blocage de fusion est exige.
-
-Secret scanning et Dependabot restent des services propres au fork ; ces deux
-workflows reutilisables ne les activent pas. Le nombre de licences n'est pas
-garanti par la creation manuelle du fork.
-
-## Preuves de validation
-
-- [Test CodeQL controle : detection et correction](./preuves/codeql-controlled-test.md)
-- [Preparation du deuxieme fork et blocage de facturation](./preuves/preparation-projects.md)
-- [Secret Scanning et Push Protection valides, preuves du test](./preuves/secret-scanning-controlled-test.md)
-- [Dependency Review : detection sur PR et retour au vert](./preuves/dependency-review-controlled-test.md)
-- [Dependabot : propositions Actions/Terraform et controles sur PR](./preuves/dependabot-validation.md)
-
-## Documentation externe
-
-- [Workflows reutilisables](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
-- [Partage dans l'organisation](https://docs.github.com/en/actions/how-tos/reuse-automations/share-with-your-organization)
-- [Variables de depot via API](https://docs.github.com/en/rest/actions/variables)
-- [API Dependency Review et restrictions](https://docs.github.com/en/rest/dependency-graph/dependency-review)
+- [Actions composites](https://docs.github.com/en/actions/tutorials/create-actions/create-a-composite-action)
+- [Options Dependabot](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference)
+- [API Dependency Review](https://docs.github.com/en/rest/dependency-graph/dependency-review)
