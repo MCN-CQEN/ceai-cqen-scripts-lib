@@ -1,5 +1,5 @@
 # Temporary branch-only integration test. Remove before merging the library PR.
-name: GHAS - Composite installation test
+name: GHAS - Composite variables test
 
 on:
   push:
@@ -15,12 +15,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  install:
+  configure:
     if: ${{ github.repository == 'MCN-CQEN/ceai-cqen-scripts-lib' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Create proposal installation token for the cluster test fork
+      # v2 has no permission-variables input. This token inherits the App
+      # installation permissions but remains scoped to this single test fork.
+      - name: Create variable management token for the cluster test fork
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
@@ -28,11 +30,8 @@ jobs:
           private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
           owner: MCN-CQEN
           repositories: ceai-cqen-labinfra-cluster-ghas
-          permission-administration: read
-          permission-contents: write
-          permission-workflows: write
 
-      - name: Install proposal on a separate branch without merging
+      - name: Configure scan variables without activation or file installation
         uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
         with:
           target-repository: MCN-CQEN/ceai-cqen-labinfra-cluster-ghas
@@ -40,5 +39,5 @@ jobs:
           library-sha: 8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
           github-token: ${{ steps.app-token.outputs.token }}
           enable-security: 'false'
-          configure-variables: 'false'
-          files-mode: install
+          configure-variables: 'true'
+          files-mode: none
