@@ -1,0 +1,117 @@
+# Compatibility/manual administration adapter, not the reusable implementation.
+# New administration repositories can call actions/ghas-prepare-fork directly.
+name: GHAS - Prepare existing fork
+on:
+  workflow_call:
+    inputs:
+      target_repository:
+        required: true
+        type: string
+      enable_security:
+        required: false
+        default: false
+        type: boolean
+      configure_variables:
+        required: false
+        default: false
+        type: boolean
+      files_mode:
+        required: false
+        default: none
+        type: string
+    secrets:
+      GHAS_APP_PRIVATE_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      target_repository:
+        description: Existing fork (OWNER/REPO).
+        required: true
+        type: string
+      enable_security:
+        description: Enable security products (may consume licenses).
+        default: false
+        type: boolean
+      configure_variables:
+        description: Configure fork scan variables.
+        default: false
+        type: boolean
+      files_mode:
+        description: File preparation, never merges.
+        default: none
+        type: choice
+        options: [none, preview, install]
+permissions:
+  contents: read
+concurrency:
+  group: ghas-prepare-${{ inputs.target_repository }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    # This legacy adapter owns credentials only in the library. Other admin
+    # repositories should use the composite action with their own scoped token.
+    if: ${{ github.repository == 'MCN-CQEN/ceai-cqen-scripts-lib' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Validate administration request before token creation
+        id: target
+        uses: actions/github-script@v9
+        env:
+          TARGET: ${{ inputs.target_repository }}
+          MODE: ${{ inputs.files_mode }}
+          APP_ID: ${{ vars.GHAS_APP_ID }}
+          APP_KEY: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+        with:
+          script: |
+            const target = process.env.TARGET;
+            if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target)) {
+              throw new Error('Use OWNER/REPO for the target.');
+            }
+            const [owner, repo] = target.split('/');
+            if (owner.toLowerCase() !== context.repo.owner.toLowerCase()
+                || repo.toLowerCase() === context.repo.repo.toLowerCase()) {
+              throw new Error('Target must be another repository in the library organization.');
+            }
+            if (!['none', 'preview', 'install'].includes(process.env.MODE)) {
+              throw new Error('files_mode must be none, preview or install.');
+            }
+            if (!process.env.APP_ID || !process.env.APP_KEY) {
+              throw new Error('Configure GHAS_APP_ID and GHAS_APP_PRIVATE_KEY in the administration repository.');
+            }
+            core.setOutput('owner', owner);
+            core.setOutput('repo', repo);
+      - name: Create explicitly scoped token
+        if: ${{ !inputs.configure_variables }}
+        id: scoped
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repo }}
+          permission-administration: ${{ inputs.enable_security && 'write' || 'read' }}
+          permission-contents: ${{ inputs.files_mode == 'install' && 'write' || 'read' }}
+          permission-workflows: ${{ inputs.files_mode == 'install' && 'write' || '' }}
+      - name: Create variable-management token scoped to the fork
+        # v2 does not expose permission-variables; this token inherits the App
+        # installation permissions. Restrict the installation itself.
+        if: ${{ inputs.configure_variables }}
+        id: variables
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GHAS_APP_ID }}
+          private-key: ${{ secrets.GHAS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repo }}
+      - name: Call reusable fork preparation action
+        # Pinned to the published, integration-tested migration commit.
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
+        with:
+          target-repository: ${{ inputs.target_repository }}
+          library-repository: ${{ github.repository }}
+          library-sha: ${{ github.sha }}
+          github-token: ${{ steps.scoped.outputs.token || steps.variables.outputs.token }}
+          enable-security: ${{ inputs.enable_security }}
+          configure-variables: ${{ inputs.configure_variables }}
+          files-mode: ${{ inputs.files_mode }}

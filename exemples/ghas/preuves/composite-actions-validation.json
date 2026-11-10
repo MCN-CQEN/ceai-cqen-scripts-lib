@@ -1,0 +1,147 @@
+{
+  "library_commit": "8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7",
+  "preparation_runs": [
+    {
+      "id": 42889724127,
+      "name": "GHAS - Composite variables test",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "947ee826f8d9a560a65817391a4b38506dffd416",
+      "html_url": "https://github.com/MCN-CQEN/ceai-cqen-scripts-lib/actions/runs/42889724127",
+      "created_at": "2026-11-10T19:53:10Z"
+    },
+    {
+      "id": 42887091191,
+      "name": "GHAS - Composite installation test",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "469a30bbd23f6fe31550dc704c314df6a65b694a",
+      "html_url": "https://github.com/MCN-CQEN/ceai-cqen-scripts-lib/actions/runs/42887091191",
+      "created_at": "2026-11-10T19:37:16Z"
+    },
+    {
+      "id": 42645562795,
+      "name": "GHAS - Composite preview test",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "f64c692e3bc748697d81f8a0cafae0d27c31d233",
+      "html_url": "https://github.com/MCN-CQEN/ceai-cqen-scripts-lib/actions/runs/42645562795",
+      "created_at": "2026-11-09T15:31:43Z"
+    }
+  ],
+  "scan_commits": [
+    {
+      "sha": "c5fff2125f13ed19e1025f7bb4d6250937e40613",
+      "checks": [
+        {
+          "name": "CodeQL (actions)",
+          "conclusion": "success",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42104014913/job/127513961237",
+          "completed_at": "2026-11-05T20:31:41Z"
+        },
+        {
+          "name": "CodeQL (python)",
+          "conclusion": "success",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42104014913/job/127513961218",
+          "completed_at": "2026-11-05T20:31:34Z"
+        },
+        {
+          "name": "dependency-review",
+          "conclusion": "success",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42104014913/job/127513960538",
+          "completed_at": "2026-11-05T20:30:42Z"
+        }
+      ]
+    },
+    {
+      "sha": "589b4be28c842e6fe17fa7ce8576259a9da49a43",
+      "checks": [
+        {
+          "name": "CodeQL (python)",
+          "conclusion": "success",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42111852327/job/127541147945",
+          "completed_at": "2026-11-05T21:22:13Z"
+        },
+        {
+          "name": "CodeQL (actions)",
+          "conclusion": "success",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42111852327/job/127541147644",
+          "completed_at": "2026-11-05T21:22:13Z"
+        },
+        {
+          "name": "dependency-review",
+          "conclusion": "failure",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42111852327/job/127541147150",
+          "completed_at": "2026-11-05T21:21:20Z"
+        }
+      ]
+    },
+    {
+      "sha": "4d98c9ce1fa8a4311c46716886fbc02db692e5f5",
+      "checks": [
+        {
+          "name": "CodeQL (actions)",
+          "conclusion": "success",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42642946897/job/129248524117",
+          "completed_at": "2026-11-09T15:17:38Z"
+        },
+        {
+          "name": "CodeQL (python)",
+          "conclusion": "success",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42642946897/job/129248523988",
+          "completed_at": "2026-11-09T15:17:11Z"
+        },
+        {
+          "name": "dependency-review",
+          "conclusion": "success",
+          "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/actions/runs/42642946897/job/129248523361",
+          "completed_at": "2026-11-09T15:16:24Z"
+        }
+      ]
+    }
+  ],
+  "pr12": {
+    "number": 12,
+    "state": "open",
+    "merged": false,
+    "html_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/pull/12",
+    "head_sha": "4d98c9ce1fa8a4311c46716886fbc02db692e5f5"
+  },
+  "CODEQL_ENABLED": "true",
+  "DEPENDENCY_REVIEW_ENABLED": "true",
+  "cleanup": {
+    "pr_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/pull/13",
+    "merged": true,
+    "merged_at": "2026-11-09T16:32:56Z"
+  },
+  "verification_date": "2026-11-10",
+  "repository": "MCN-CQEN/ceai-cqen-labinfra-cluster-ghas",
+  "repository_id": 1435756700,
+  "proposal": {
+    "branch": "feature/ghas-setup-bbcbf3f66f20-8c108cedf0fa",
+    "base_commit": "bbcbf3f66f2025090e96d7f7204621c698f9bec3",
+    "commit": "da29b6219e441c8f70fab3683145791b4dcb3845",
+    "compare_url": "https://github.com/MCN-CQEN/ceai-cqen-labinfra-cluster-ghas/compare/dev...feature%2Fghas-setup-bbcbf3f66f20-8c108cedf0fa",
+    "changed_files": [
+      ".github/workflows/ghas-security.yml"
+    ],
+    "ahead_by": 1,
+    "behind_by": 0,
+    "default_branch_unchanged_at_verification": true
+  },
+  "detection_report": {
+    "source": "Vulnerability log supplied by the user; job failure independently verified by API.",
+    "package": "requests",
+    "version": "2.19.1",
+    "path": "security-tests/dependency-review/requirements.txt",
+    "advisories": [
+      "GHSA-x84v-xcm2-53pg",
+      "GHSA-j8r2-6x86-q33q",
+      "GHSA-9wx4-h78v-vm56",
+      "GHSA-9hjg-9r4m-mvj7",
+      "GHSA-gc5v-m9x4-r6x2"
+    ],
+    "message": "Dependency review detected vulnerable packages."
+  },
+  "variable_summary_source": "User-provided run summary: both desired true, result verified; saved values independently read by API."
+}

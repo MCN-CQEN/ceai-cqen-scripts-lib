@@ -1,0 +1,41 @@
+name: GHAS toolkit tests
+
+on:
+  push:
+    branches: [feature/ghas-toolkit]
+    paths:
+      - scripts/ghas/**
+      - tests/ghas/**
+      - actions/ghas-*/**
+      - exemples/ghas/*.yml
+      - .github/workflows/ghas-codeql.yml
+      - .github/workflows/ghas-dependency-review.yml
+      - .github/workflows/ghas-prepare-fork.yml
+      - .github/workflows/ghas-toolkit-tests.yml
+  pull_request:
+    paths:
+      - scripts/ghas/**
+      - tests/ghas/**
+      - actions/ghas-*/**
+      - exemples/ghas/*.yml
+      - .github/workflows/ghas-codeql.yml
+      - .github/workflows/ghas-dependency-review.yml
+      - .github/workflows/ghas-prepare-fork.yml
+      - .github/workflows/ghas-toolkit-tests.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install -r tests/ghas/requirements.txt
+      - run: python3 -m unittest discover -s tests/ghas -v

@@ -96,6 +96,9 @@ Pour la création d'un script:
 |Create ArgoCD Application | Permet d’automatiser la création d’une application Argo CD dans un projet spécifique si elle n’existe pas déjà. | [Readme](./create-argocd-app/README.md) | [action](./create-argocd-app/action.yml) |
 |Gitflow | Workflows réutilisables facilitant la mise en oeuvre du GitFlow dans les dépôts de code du CQEN | [Readme](./gitflow/README.md) | [plusieurs fichiers, voir répertoire](./gitflow/README.md) |
 |Infra validate tf|Valide le code Terraform|[Readme](./infra-validate-tf/README.md)|[action](./infra-validate-tf/action.yml)|
+|GHAS CodeQL|Analyse CodeQL du depot appelant, un langage par job|[Readme](./ghas-codeql/README.md)|[action](./ghas-codeql/action.yml)|
+|GHAS Dependency Review|Controle les dependances introduites par une PR|[Readme](./ghas-dependency-review/README.md)|[action](./ghas-dependency-review/action.yml)|
+|GHAS Prepare Fork|Inspecte et prepare un fork via API, mutations explicites|[Readme](./ghas-prepare-fork/README.md)|[action](./ghas-prepare-fork/action.yml)|
 |Login S3|Enregistre les logs des tests et des déploiements dans un bucket Amazon S3|[Readme](./logging-s3/README.md)|[action](./logging-s3/action.yml)|
 |Publish image to registry| Publie une image au registre des conteneurs d'images | [Readme](./publish-image-to-registry/README.md) | [action](./publish-image-to-registry/action.yml)|
 |Remove ArgoCD Application| Permet d'automatiser la suppression d'une application Argo CD. | [Readme](./remove-argocd-app/README.md) | [action](./remove-argocd-app/action.yml)|

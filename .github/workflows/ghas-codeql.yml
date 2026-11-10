@@ -1,0 +1,30 @@
+# Compatibility adapter. New callers should use actions/ghas-codeql in their own jobs.
+name: Reusable GHAS - CodeQL
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: JSON array of interpreted CodeQL languages.
+        required: true
+        type: string
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(inputs.languages) }}
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+      # Pinned to the published, integration-tested migration commit.
+      - uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-codeql@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
+        with:
+          language: ${{ matrix.language }}

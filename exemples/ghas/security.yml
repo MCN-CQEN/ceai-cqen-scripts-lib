@@ -1,0 +1,46 @@
+# Caller-owned workflow. Composite actions are pinned to the tested migration SHA.
+name: GHAS - Security checks
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+  schedule:
+    - cron: '34 6 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ghas-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  codeql:
+    if: ${{ vars.CODEQL_ENABLED == 'true' }}
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, python]
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+      - uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-codeql@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
+        with:
+          language: ${{ matrix.language }}
+  dependency-review:
+    if: ${{ github.event_name == 'pull_request' && vars.DEPENDENCY_REVIEW_ENABLED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+      - uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-dependency-review@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
+        with:
+          fail-on-severity: low
