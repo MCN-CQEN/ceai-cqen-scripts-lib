@@ -105,8 +105,8 @@ jobs:
           owner: ${{ steps.target.outputs.owner }}
           repositories: ${{ steps.target.outputs.repo }}
       - name: Call reusable fork preparation action
-        # Transitional ref: pin to the migration commit after publishing/testing.
-        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@feature/ghas-toolkit
+        # Pinned to the published, integration-tested migration commit.
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
         with:
           target-repository: ${{ inputs.target_repository }}
           library-repository: ${{ github.repository }}

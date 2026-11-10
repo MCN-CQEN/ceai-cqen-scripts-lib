@@ -1,8 +1,9 @@
 # Migration vers des actions composites
 
-Etat local du 2026-11-05 : implementation et tests locaux, essais GitHub a faire.
-Aucun commit, push, merge ou changement de configuration GitHub n'est realise
-par cette migration locale.
+Etat du 2026-11-10 : migration publiee sur la branche de travail et tests GitHub
+realises sur le fork cluster. Le nettoyage final (retrait du workflow temporaire,
+references figees et preuves) est prepare localement, a publier puis faire revoir.
+Voir les [resultats exportes](./preuves/composite-actions-validation.md).
 
 ## Architecture
 
@@ -19,14 +20,13 @@ Les nouveaux consumers utilisent `jobs.<job>.steps[].uses`, pas
 `jobs.<job>.uses`. Les regles de branche doivent etre revues si les noms de
 controles changent. Aucun workflow de deploiement n'est ajoute.
 
-## References avant publication
+## References de livraison
 
-Les actions n'existent pas encore dans les anciens commits. Les exemples et
-adaptateurs utilisent donc `feature/ghas-toolkit` pendant le pilote de migration.
-Apres publication, relever le SHA complet et l'utiliser pour les essais du fork
-et le parametre `library-sha`. Avant fusion finale de la bibliotheque, remplacer
-les references de branche des exemples, README et adaptateurs par le SHA valide.
-Ne pas utiliser l'ancien commit `221333ee...` pour les nouvelles actions.
+Les exemples, README et adaptateurs appellent les nouvelles actions au SHA
+publie et teste `8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7`, sans reference a la
+branche de travail. Les anciens commits du pilote ne contiennent pas ces actions.
+Un futur changement d'implementation exige un nouveau SHA valide ; les commits
+de nettoyage de documentation ne modifient pas le code des actions teste ici.
 
 Les fichiers generes utilisent deja les actions par SHA complet ; verifier que
 le SHA fourni contient effectivement les trois dossiers d'action. Un pin de
@@ -55,7 +55,14 @@ desactivees ; les gardes Bash sont executees directement par les tests.
 L'entree CLI historique a aussi ete lancee depuis un repertoire etranger avec
 `--help`, sans checkout de la bibliotheque dans le workspace appelant.
 
-## Parcours GitHub a suivre apres publication
+Le nettoyage final ajoute des tests empechant une livraison avec un workflow
+pilote temporaire ou des references mutables aux actions de bibliotheque.
+Verification du 2026-11-10 : les 38 tests reussissent. Actionlint 1.7.7 valide
+les trois adaptateurs, la CI et les deux exemples sans erreur, avec les memes
+limites ShellCheck/Pyflakes decrites ci-dessus. Aucun commit ou push de ce
+nettoyage final n'a ete effectue par l'agent.
+
+## Parcours GitHub de reproduction
 
 1. Conserver le fork cluster licencie et exporter les preuves existantes.
    Aucun vrai secret ni droit AWS n'est necessaire pour le scan.
@@ -88,6 +95,23 @@ L'entree CLI historique a aussi ete lancee depuis un repertoire etranger avec
 Le test Secret Scanning/Push Protection reste une preuve historique du service
 GitHub, pas une fonction locale de l'action CodeQL. Une nouvelle configuration
 d'administration doit verifier les reglages reels sans supposer leur activation.
+
+Les etapes 3 a 5 sont constatees dans la PR 12, puis le nettoyage de dev dans la
+PR 13. Preview, install et variables ont ete executes via trois runs distincts
+du workflow temporaire, avec la meme action figee au SHA teste. Ce workflow est
+retire pour la livraison ; les prochains tests passent par le workflow manuel
+d'administration. L'activation facturable, un nouveau test controle CodeQL et un
+run planifie ne sont pas prouves par ces runs : ne pas les annoncer comme faits.
+
+## Revue finale
+
+1. Publier le nettoyage final et attendre les controles de la PR 38.
+2. Faire revoir les actions, les permissions de l'App et les metadonnees de forks
+   prives conservees dans la bibliotheque publique.
+3. Confirmer le perimetre accepte : pilote sur fork, pas activation sur le depot source.
+4. Apres approbation et fusion, verifier le lancement manuel en lecture seule.
+   Ne pas relancer les anciens runs temporaires : ils conservent leurs options,
+   y compris les permissions d'installation et de gestion des variables.
 
 ## Points non automatises
 

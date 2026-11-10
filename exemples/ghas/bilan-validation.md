@@ -1,73 +1,76 @@
 # Bilan de validation GHAS
 
-> Mise a jour du 2026-11-05 : ce bilan decrit le pilote historique base sur les
-> workflows reutilisables. Le kit a ete migre localement vers des actions composites
-> sous `actions/`. Les tests GitHub de cette nouvelle integration restent a faire ;
-> voir [migration et plan de test](./migration-actions.md). Les preuves ci-dessous
-> ne doivent pas etre presentees comme une validation distante de la migration.
+Etat au 2026-11-10. Cible pilote :
+`MCN-CQEN/ceai-cqen-labinfra-cluster-ghas`, ID `1435756700`, branche par defaut
+`dev`. Bibliotheque : PR 38, integration finale soumise a revue et approbation.
 
-Etat du pilote au 2026-11-03. Cible :
-`MCN-CQEN/ceai-cqen-labinfra-cluster-ghas`, branche par defaut `dev`.
-Ce bilan ne vaut pas activation sur le depot source ni validation de tous les
-depots de l'organisation.
+La solution utilise des actions composites sous `actions/`, conformement a
+la structure de la bibliotheque. Les anciens workflows restent des adaptateurs
+temporaires pour les consumers existants, pas l'interface conseillee.
+Voir les [preuves de migration](./preuves/composite-actions-validation.md).
 
 ## Criteres d'acceptation
 
-| Critere | Etat dans le pilote | Preuve ou reserve |
+| Critere | Resultat sur le fork pilote | Preuve ou reserve |
 | --- | --- | --- |
-| GHAS active et configure | Valide sur le fork | Code Security, Secret scanning et Push Protection constates actifs ; analyses et alertes obtenues |
-| Analyse CodeQL reussie | Valide : Actions et Python | [Detection et correction Actions](./preuves/codeql-controlled-test.md) ; Python execute, pas de vulnerabilite Python controlee |
-| Secret scanning fonctionnel | Valide pour le motif fictif | [Alerte 1 et refus GH013](./preuves/secret-scanning-controlled-test.md) ; alerte cloturee, fichier retire |
-| Controles de dependances | Valide sur PR et propositions de versions | [Dependency Review](./preuves/dependency-review-controlled-test.md), [Dependabot](./preuves/dependabot-validation.md) |
-| Execution automatique en developpement | Valide sur PR | PR de test et PR Dependabot ; le declenchement planifie est configure mais pas prouve par un run planifie dans ces fiches |
-| Problemes consultables | Valide CodeQL et Secret scanning | Alertes GitHub conservees ; vulnerabilites de dependances visibles dans les Checks de la PR 1, pas de preuve controlee d'alerte Dependabot |
-| Probleme controle detecte | Valide | Reference mutable, valeur fictive et requests 2.19.1 ; correction/nettoyage verifies |
-| Configuration et traitement documentes | Redige, a relire et publier | README, preparation multi-depot, fiches de preuve et [procedure](./traitement-alertes.md) |
+| GHAS active et configure | Valide pour le service sur ce fork | Produits constates actifs ; activation composite sur un depot desactive non rejouee |
+| Analyse CodeQL reussie | Valide via composite : Actions et Python | [PR 12 et runs](./preuves/composite-actions-validation.md) |
+| Secret scanning fonctionnel | Valide avec motif fictif | [Alerte 1 et refus GH013](./preuves/secret-scanning-controlled-test.md) ; test historique, independant de la migration des scans |
+| Controles de dependances | Valides sur PR et propositions de versions | Composite : rejet de requests 2.19.1 puis retour au vert ; [Dependabot](./preuves/dependabot-validation.md) |
+| Execution automatique | Validee sur PR | Jobs du fork appelant les actions ; calendrier configure mais sans preuve de run planifie |
+| Problemes accessibles | CodeQL et Secret scanning valides ; dependances visibles dans les Checks | [CodeQL controle](./preuves/codeql-controlled-test.md), alertes historiques ; pas de preuve controlee d'alerte Dependabot |
+| Probleme controle detecte | Valide | Nouvelle action Dependency Review : 5 vulnerabilites detectees ; CodeQL Actions et motif fictif historiquement testes |
+| Configuration et traitement documentes | Rediges et references | [README](./README.md), [preparation](./preparation-multidepot.md), [procedure](./traitement-alertes.md) ; nettoyage final a publier |
 
-## Ce que le pilote demontre
+## Validation de la bibliotheque reutilisable
 
-Les workflows reutilisables centralisent CodeQL et Dependency Review. Le fork
-porte les reglages de securite et les alertes. L'application GitHub permet une
-preparation ciblee, avec activation, variables et fichiers sur demande explicite.
-Le depot source n'est pas la cible de ces operations.
+- `ghas-codeql` : analyse du checkout du caller ; matrice et permissions dans son workflow.
+- `ghas-dependency-review` : rejet d'une dependance vulnerable puis retour au vert.
+- `ghas-prepare-fork` : preview sans modification, installation d'un seul commit
+  sur une branche de proposition, configuration et relecture des deux variables.
+- Dev restee intacte pendant le test d'installation ; le manifeste vulnerable
+  present sur dev a ete retire par une PR de nettoyage distincte (13).
+- Exemples et adaptateurs figes sur `8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7`.
+- Workflow temporaire de tests retire dans le nettoyage de livraison ; aucune
+  cible de test declenchee automatiquement n'est livree.
+- Code du fork jamais execute par la preparation ; la cle App reste dans le
+  depot d'administration, pas dans les jobs de scan.
 
-Les PR de configuration Dependabot (2) et GitFlow (11) sont fusionnees dans le
-fork. La PR Dependabot 9 reste ouverte lors de la verification, ses controles
-centralises et GitFlow reussissent. La fusion de cette mise a jour n'est pas un
-critere de reussite du test.
+Les PR de configuration historiques Dependabot (2) et GitFlow (11) sont fusionnees
+dans le fork. La PR composite 12 reste ouverte et non fusionnee lors de la
+verification. La branche d'installation est conservee comme preuve, sans fusion.
+La bibliotheque ne fusionne aucune proposition ni ne supprime les forks.
 
-## Restes et limites
+## Restes pour la cloture administrative
 
-1. Revoir et publier la documentation dans la branche de travail de la
-   bibliotheque selon le processus de PR habituel. Aucun commit ni push de cette
-   documentation n'a ete realise par l'agent pendant sa redaction.
-2. Le 2026-11-04, le pilote local a ete remis en inspection sur le deuxieme fork :
-   `enable_security: false`, `configure_variables: false`, `files_mode: preview`.
-   Le retour en inspection a ete publie et constate dans le resume fourni par
-   l'utilisateur. Le pilote temporaire est maintenant retire localement au
-   profit du lancement manuel apres integration ; ce retrait reste a publier.
-3. Stabiliser les references de workflows par SHA et traiter les alertes
-   preexistantes de references mutables. L'exemple manuel a ete fige localement
-   le 2026-11-04 au SHA publie `221333ee22916ac85d18c6d3c604d02339e9b6cd`.
-   Le generateur produit deja des SHA. Cette modification de l'exemple ne met
-   pas a jour les appels sur `feature/ghas-toolkit` du fork cluster existant.
-4. Revoir les anciens workflows ignores et les workflows d'infrastructure
-   herites. Leur absence d'execution AWS n'est pas garantie par le kit.
-5. Si le blocage avant fusion est exige, configurer et tester les protections
-   de branche/rulesets ; elles ne sont pas mises en place par cette documentation.
-6. La preparation de fichiers sur un autre fork est validee, mais son activation
-   et ses analyses restent bloquees par le verrou de facturation constate le
-   2026-10-29 : voir [preuve multi-depot](./preuves/preparation-projects.md).
-7. Les projets compiles, registres prives et manifestes non reconnus exigent des
-   profils supplementaires. Un fork manuel ne garantit pas une seule licence.
-8. Les reglages Dependabot ont ete confirmes par l'utilisateur et des PR de
-   versions existent ; une alerte Dependabot controlee et son cycle de correction
-   n'ont pas ete testes. Terraform est suivi pour les mises a jour, pas analyse
-   par CodeQL comme un langage pris en charge.
+1. Publier le nettoyage final, verifier la CI, puis faire approuver la PR 38.
+2. Confirmer avec le responsable que le pilote sur fork satisfait le perimetre
+   retenu. Il ne constitue pas une activation GHAS sur le depot source.
+3. Apres fusion de la bibliotheque, verifier le lancement manuel en lecture seule
+   depuis la branche par defaut du depot d'administration.
+4. Exporter les preuves selon les regles internes avant suppression des forks ;
+   les liens vers leurs alertes/PR/jobs ne sont pas un archivage autonome complet.
 
-## Suite proposee
+## Limites et extensions distinctes
 
-Relire ces preuves et limites avec le responsable de la tache, puis decider si
-la livraison attendue est le pilote sur fork ou le deploiement generalise.
-Ne pas annoncer la tache initiale terminee sur le depot source : l'utilisateur
-a choisi de garder l'activation dans les forks uniquement.
+- Les profils compiles, registres prives et manifestes non reconnus exigent des
+  adaptations. Le kit n'est pas valide universellement sur tous les projets.
+- La preparation sur un [deuxieme fork](./preuves/preparation-projects.md) est
+  historique ; son activation et ses analyses restent non validees apres le
+  verrou de facturation constate. Faire verifier cet etat par un administrateur.
+- Les protections de branche et le blocage obligatoire de fusion ne sont pas
+  configures/testes par ce pilote. Un job CodeQL reussi n'implique pas zero alerte.
+- Les anciens workflows ignores et les workflows d'infrastructure herites restent
+  a revoir par depot. Le kit ne desactive pas ces derniers automatiquement.
+- Les alertes preexistantes ne sont pas toutes corrigees. Les actions tierces
+  appelees a l'interieur des composites gardent leurs versions a maintenir,
+  notamment les avertissements de runtime Node.js.
+- Une nouvelle vulnerabilite Python controlee, le cycle d'une alerte Dependabot
+  sur la branche par defaut et une nouvelle detection/correction CodeQL via
+  composite ne sont pas prouves par les runs de migration seuls.
+- Une recreation de fork sous le meme nom doit conserver son ID dans les preuves,
+  reverifier l'installation de l'App, les produits et Dependabot version updates.
+  Elle ne garantit pas une seule licence et ne contourne pas la facturation.
+
+Conclusion : pilote technique valide dans le perimetre documente ; integration
+et acceptation finale en attente de publication/revue, sans deploiement generalise.

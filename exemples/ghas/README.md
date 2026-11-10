@@ -26,12 +26,11 @@ de la cle GitHub App, d'un environnement AWS ou de `secrets: inherit`.
   depot d'administration de confiance. Il fournit le jeton cible a l'action
   de preparation. La cle PEM reste dans ce depot d'administration, pas dans les forks.
 
-Les exemples et adaptateurs utilisent temporairement `@feature/ghas-toolkit`
-pour tester les nouvelles actions. L'ancien SHA
-`221333ee22916ac85d18c6d3c604d02339e9b6cd` ne contient pas ces actions et ne
-peut pas servir de reference pour la migration. Apres publication et essais,
-figer tous ces appels sur le SHA complet du commit de migration valide avant
-integration. Le generateur produit deja des appels par SHA complet.
+Les exemples et adaptateurs appellent les actions au commit teste
+`8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7`. Le generateur utilise aussi un SHA
+complet. Fournir un commit contenant les trois actions dans `library-sha` ;
+un ancien commit ne contenant que les workflows ne convient pas. Une evolution
+des actions exige une nouvelle validation et une mise a jour deliberee des SHA.
 
 ## Preparation d'un nouveau fork
 
@@ -77,11 +76,13 @@ Aucun workflow pilote automatique specifique a un fork n'est ajoute.
 
 ## Validation et exploitation
 
-Le [plan de migration et de tests](./migration-actions.md) distingue les nouveaux
-tests locaux des validations distantes encore necessaires. Les preuves du pilote
-historique ne valent pas validation des nouvelles actions composites.
+Le [plan de migration et de tests](./migration-actions.md) et la
+[preuve des actions composites](./preuves/composite-actions-validation.md)
+decrivent les tests locaux et distants realises ainsi que les limites restantes.
+Les anciennes preuves restent des observations historiques distinctes.
 
 - [Bilan historique du pilote](./bilan-validation.md)
+- [Validation des actions composites et donnees exportees](./preuves/composite-actions-validation.md)
 - [Traitement des alertes](./traitement-alertes.md)
 - [CodeQL : detection et correction](./preuves/codeql-controlled-test.md)
 - [Secret Scanning et Push Protection](./preuves/secret-scanning-controlled-test.md)

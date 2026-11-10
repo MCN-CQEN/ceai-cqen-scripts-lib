@@ -22,8 +22,8 @@ steps:
   - uses: actions/checkout@v7.0.0
     with:
       persist-credentials: false
-  # Branche pour les tests de migration ; figer au SHA publie avant livraison.
-  - uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-dependency-review@feature/ghas-toolkit
+  # Commit de migration publie et teste dans le fork pilote.
+  - uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-dependency-review@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
     with:
       fail-on-severity: low
 ```

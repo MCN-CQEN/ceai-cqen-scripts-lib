@@ -37,8 +37,8 @@ de job. Ne jamais placer ce workflow sur un declencheur de PR non fiable.
 
 ```yaml
 - name: Prepare fork
-  # Branche pour les tests de migration ; figer au SHA publie avant livraison.
-  uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@feature/ghas-toolkit
+  # Commit de migration publie et teste dans le fork pilote.
+  uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
   with:
     target-repository: ORG/fork-de-test
     library-repository: ORG/bibliotheque
@@ -87,8 +87,11 @@ preserve. Aucun deploiement, suppression de fork ou analyse distante n'est lance
 
 Les anciens workflows `.github/workflows/ghas-*.yml` sont des adaptateurs
 temporaires. Les nouveaux depots doivent appeler les actions depuis leurs jobs.
-Les preuves historiques valident les anciens workflows, pas encore cette
-nouvelle integration composite. Voir [le plan de test](../../exemples/ghas/migration-actions.md).
+Les anciens workflows possedent des preuves historiques distinctes. Le preview,
+l'installation sur une branche et la verification des variables de cette action
+ont ete testes sur le fork cluster : voir les
+[preuves composites](../../exemples/ghas/preuves/composite-actions-validation.md)
+et le [plan de test](../../exemples/ghas/migration-actions.md).
 Les registres prives et langages compiles exigent des adaptations. Avant de
 fusionner une proposition dans un fork, verifier les regles GitFlow, desactiver
 les workflows de deploiement herites et activer les mises a jour de versions

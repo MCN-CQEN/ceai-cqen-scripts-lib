@@ -1,5 +1,5 @@
 # Install in a TRUSTED administration repository, never in an untrusted PR job.
-# For migration tests only: pin action uses to the published migration SHA before production.
+# Composite preparation action pinned to the tested migration SHA.
 name: Prepare a GHAS test fork
 on:
   workflow_dispatch:
@@ -76,7 +76,7 @@ jobs:
           repositories: ${{ steps.target.outputs.repo }}
       - name: Prepare verified fork
         id: ghas
-        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@feature/ghas-toolkit
+        uses: MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-prepare-fork@8c108cedf0faa03e3ff6cf153ef1b62484a6d8c7
         with:
           target-repository: ${{ inputs.target_repository }}
           library-repository: MCN-CQEN/ceai-cqen-scripts-lib

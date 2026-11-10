@@ -3,7 +3,7 @@
 ## Perimetre et acces
 
 Utiliser le fork cible, pas la bibliotheque ni le depot source. La bibliotheque
-centralise les workflows ; les resultats des analyses sont associes au depot
+centralise les actions composites ; les resultats des analyses sont associes au depot
 appelant. L'acces aux vues depend des permissions de securite du compte.
 
 Dans le depot, ouvrir `Security` (ou `Security and quality` selon l'interface).

@@ -16,6 +16,23 @@ def document(relative):
 
 
 class ActionContractTests(unittest.TestCase):
+    def test_delivery_adapters_and_examples_pin_library_actions(self):
+        paths = [f".github/workflows/ghas-{name}.yml" for name in
+                 ("codeql", "dependency-review", "prepare-fork")]
+        paths += ["exemples/ghas/security.yml", "exemples/ghas/prepare-fork.yml"]
+        for path in paths:
+            workflow = document(path)
+            references = [step["uses"] for job in workflow["jobs"].values()
+                          for step in job["steps"] if "uses" in step
+                          and step["uses"].startswith("MCN-CQEN/ceai-cqen-scripts-lib/actions/ghas-")]
+            self.assertTrue(references, path)
+            for reference in references:
+                self.assertRegex(reference, r"@[a-f0-9]{40}$", path)
+
+    def test_temporary_pilot_workflows_are_not_delivered(self):
+        for filename in ("ghas-pilot.yml", "ghas-composite-preview-test.yml"):
+            self.assertFalse((ROOT / ".github/workflows" / filename).exists())
+
     def test_actions_are_step_libraries_not_workflows(self):
         for name in ("ghas-codeql", "ghas-dependency-review", "ghas-prepare-fork"):
             with self.subTest(name=name):
